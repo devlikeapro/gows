@@ -5,7 +5,20 @@ package messages;
 option go_package = "/";
 
 service MessageService {
+  rpc StartSession(Session) returns (Empty);
+  rpc StopSession(Session) returns (Empty);
   rpc SendText (TextMessageRequest) returns (MessageResponse);
+}
+
+service EventStream {
+  rpc StreamEvents(Empty) returns (stream EventJson);
+}
+
+message Empty {}
+
+message EventJson {
+  string event = 1;
+  string data = 2;
 }
 
 message Session {
