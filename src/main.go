@@ -3,9 +3,12 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/golang/protobuf/proto"
 	"github.com/mdp/qrterminal/v3"
 	"go.mau.fi/whatsmeow"
+	waE2E "go.mau.fi/whatsmeow/proto/waE2E"
 	"go.mau.fi/whatsmeow/store/sqlstore"
+	"go.mau.fi/whatsmeow/types"
 	"go.mau.fi/whatsmeow/types/events"
 	waLog "go.mau.fi/whatsmeow/util/log"
 	"google.golang.org/grpc"
@@ -25,8 +28,21 @@ type server struct {
 }
 
 func (s *server) SendText(ctx context.Context, req *pb.TextMessageRequest) (*pb.MessageResponse, error) {
-	log.Printf("Received message: %s\n", req.Text)
-	return &pb.MessageResponse{Id: "1", Timestamp: time.Now().Unix()}, nil
+	jid, err := types.ParseJID(req.GetJid())
+	if err != nil {
+		return nil, err
+	}
+
+	cli := s.client
+	res, err := cli.SendMessage(context.Background(), jid, &waE2E.Message{
+		Conversation: proto.String(req.GetText()),
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.MessageResponse{Id: res.ID, Timestamp: time.Now().Unix()}, nil
 }
 
 func BuildClient() *whatsmeow.Client {
