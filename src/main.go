@@ -15,6 +15,8 @@ import (
 	"time"
 
 	pb "github.com/devlikeapro/noweb2/proto"
+
+	_ "github.com/mattn/go-sqlite3" // Import the SQLite drive
 )
 
 type server struct {
@@ -29,7 +31,7 @@ func (s *server) SendText(ctx context.Context, req *pb.TextMessageRequest) (*pb.
 
 func BuildClient() *whatsmeow.Client {
 	dbLog := waLog.Stdout("Database", "DEBUG", true)
-	container, err := sqlstore.New("sqlite3", "file:examplestore.db?_foreign_keys=on", dbLog)
+	container, err := sqlstore.New("sqlite3", "file:.sessions/noweb2.db?_foreign_keys=on", dbLog)
 	if err != nil {
 		panic(err)
 	}
