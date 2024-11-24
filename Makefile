@@ -1,10 +1,10 @@
 clean:
-	rm -rf src/proto/gen
+	rm -rf src/proto
 
 build:
-	mkdir -p src/proto/gen
+	mkdir -p src/proto
 	protoc \
-		-I=./src/proto \
-		--go_out=./src/proto/gen \
-		--go-grpc_out=./src/proto/gen \
-		 src/proto/*.proto
+		-I=. \
+		--go_out=./src/proto \
+		--go-grpc_out=./src/proto \
+		 proto/*.proto

@@ -2,48 +2,77 @@ package main
 
 import (
 	"context"
+	"fmt"
+	"github.com/mdp/qrterminal/v3"
+	"go.mau.fi/whatsmeow"
+	"go.mau.fi/whatsmeow/store/sqlstore"
+	"go.mau.fi/whatsmeow/types/events"
+	waLog "go.mau.fi/whatsmeow/util/log"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 	"log"
 	"net"
 	"os"
 	"time"
 
-	pb "github.com/devlikeapro/noweb2/proto/gen"
+	pb "github.com/devlikeapro/noweb2/proto"
 )
 
 type server struct {
 	pb.UnimplementedMessageServiceServer
+	client *whatsmeow.Client
 }
 
-// Sum implements the SumService.Sum RPC method.
-func (s *server) Sum(ctx context.Context, req *pb.SumRequest) (*pb.SumResponse, error) {
-	var result int64
-	for _, num := range req.Numbers {
-		result += num
-	}
-	if result == 10 {
-		return nil, status.Errorf(codes.Code(13), "10 is evil")
-	}
-	return &pb.SumResponse{Result: result}, nil
+func (s *server) SendText(ctx context.Context, req *pb.TextMessageRequest) (*pb.MessageResponse, error) {
+	log.Printf("Received message: %s\n", req.Text)
+	return &pb.MessageResponse{Id: "1", Timestamp: time.Now().Unix()}, nil
 }
 
-func (s *server) StreamTimestamps(stream pb.TimestampService_StreamTimestampsServer) error {
-	log.Println("Client connected to StreamTimestamps")
+func BuildClient() *whatsmeow.Client {
+	dbLog := waLog.Stdout("Database", "DEBUG", true)
+	container, err := sqlstore.New("sqlite3", "file:examplestore.db?_foreign_keys=on", dbLog)
+	if err != nil {
+		panic(err)
+	}
+	// If you want multiple sessions, remember their JIDs and use .GetDevice(jid) or .GetAllDevices() instead.
+	deviceStore, err := container.GetFirstDevice()
+	if err != nil {
+		panic(err)
+	}
+	clientLog := waLog.Stdout("Client", "DEBUG", true)
+	client := whatsmeow.NewClient(deviceStore, clientLog)
 
-	// Start streaming timestamps to the client
-	for {
-		timestamp := time.Now().Unix()
-		response := &pb.TimestampResponse{Timestamp: timestamp}
-
-		// Send the current timestamp to the client
-		if err := stream.Send(response); err != nil {
-			log.Printf("Error sending timestamp: %v", err)
-			return err
+	if client.Store.ID == nil {
+		// No ID stored, new login
+		qrChan, _ := client.GetQRChannel(context.Background())
+		err = client.Connect()
+		if err != nil {
+			panic(err)
 		}
+		for evt := range qrChan {
+			if evt.Event == "code" {
+				// Render the QR code here
+				// e.g. qrterminal.GenerateHalfBlock(evt.Code, qrterminal.L, os.Stdout)
+				// or just manually `echo 2@... | qrencode -t ansiutf8` in a terminal
+				fmt.Println("QR code:", evt.Code)
+				qrterminal.GenerateHalfBlock(evt.Code, qrterminal.L, os.Stdout)
+			} else {
+				fmt.Println("Login event:", evt.Event)
+			}
+		}
+	} else {
+		// Already logged in, just connect
+		err = client.Connect()
+		if err != nil {
+			panic(err)
+		}
+	}
+	return client
+}
 
-		time.Sleep(1 * time.Second) // Wait for 1 second before sending the next timestamp
+func eventHandler(evt interface{}) {
+	switch v := evt.(type) {
+	case *events.Message:
+		fmt.Println("Received a message!", v.Message.GetConversation())
 	}
 }
 
@@ -62,8 +91,12 @@ func main() {
 	grpcServer := grpc.NewServer()
 
 	// Register the TimestampService with the server
-	pb.RegisterSumServiceServer(grpcServer, &server{})
-	pb.RegisterTimestampServiceServer(grpcServer, &server{})
+	client := BuildClient()
+	client.AddEventHandler(eventHandler)
+
+	pb.RegisterMessageServiceServer(grpcServer, &server{
+		client: client,
+	})
 
 	log.Println("Server is listening on port 50051")
 

@@ -5,14 +5,14 @@ package messages;
 option go_package = "/";
 
 service MessageService {
-  rpc SendText (TextRequest) returns (MessageResponse);
+  rpc SendText (TextMessageRequest) returns (MessageResponse);
 }
 
 message Session {
   string id = 1;
 }
 
-message TextRequest {
+message TextMessageRequest {
   Session session = 1;
   string jid = 2;
   string text = 3;
