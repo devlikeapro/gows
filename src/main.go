@@ -3,47 +3,20 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/golang/protobuf/proto"
+	pb "github.com/devlikeapro/noweb2/proto"
+	"github.com/devlikeapro/noweb2/server"
 	"github.com/mdp/qrterminal/v3"
 	"go.mau.fi/whatsmeow"
-	waE2E "go.mau.fi/whatsmeow/proto/waE2E"
 	"go.mau.fi/whatsmeow/store/sqlstore"
-	"go.mau.fi/whatsmeow/types"
 	"go.mau.fi/whatsmeow/types/events"
 	waLog "go.mau.fi/whatsmeow/util/log"
 	"google.golang.org/grpc"
 	"log"
 	"net"
 	"os"
-	"time"
-
-	pb "github.com/devlikeapro/noweb2/proto"
 
 	_ "github.com/mattn/go-sqlite3" // Import the SQLite drive
 )
-
-type server struct {
-	pb.UnimplementedMessageServiceServer
-	client *whatsmeow.Client
-}
-
-func (s *server) SendText(ctx context.Context, req *pb.TextMessageRequest) (*pb.MessageResponse, error) {
-	jid, err := types.ParseJID(req.GetJid())
-	if err != nil {
-		return nil, err
-	}
-
-	cli := s.client
-	res, err := cli.SendMessage(context.Background(), jid, &waE2E.Message{
-		Conversation: proto.String(req.GetText()),
-	})
-
-	if err != nil {
-		return nil, err
-	}
-
-	return &pb.MessageResponse{Id: res.ID, Timestamp: time.Now().Unix()}, nil
-}
 
 func BuildClient() *whatsmeow.Client {
 	dbLog := waLog.Stdout("Database", "DEBUG", true)
@@ -112,8 +85,8 @@ func main() {
 	client := BuildClient()
 	client.AddEventHandler(eventHandler)
 
-	pb.RegisterMessageServiceServer(grpcServer, &server{
-		client: client,
+	pb.RegisterMessageServiceServer(grpcServer, &server.Server{
+		Client: client,
 	})
 
 	log.Println("Server is listening on port 50051")
