@@ -18,8 +18,9 @@ service EventStream {
 message Empty {}
 
 message EventJson {
+  string session = 2;
   string event = 1;
-  string data = 2;
+  string data = 3;
 }
 
 message Session {

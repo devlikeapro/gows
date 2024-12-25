@@ -4,6 +4,7 @@ import (
 	"context"
 	"go.mau.fi/whatsmeow"
 	"go.mau.fi/whatsmeow/store"
+	"go.mau.fi/whatsmeow/types"
 	waLog "go.mau.fi/whatsmeow/util/log"
 )
 
@@ -41,20 +42,25 @@ func (gows *GoWS) Start() error {
 	if err != nil {
 		return err
 	}
-
-	//for evt := range qrChan {
-	//	if evt.Event == "code" {
-	//		// Render the QR code here
-	//		// e.g. qrterminal.GenerateHalfBlock(evt.Code, qrterminal.L, os.Stdout)
-	//		// or just manually `echo 2@... | qrencode -t ansiutf8` in a terminal
-	//		qrterminal.GenerateHalfBlock(evt.Code, qrterminal.L, os.Stdout)
-	//	} else {
-	//		fmt.Println("Login event:", evt.Event)
-	//	}
-	//}
 	return nil
 }
 
 func (gows *GoWS) Stop() {
 	gows.Disconnect()
+}
+
+func (gows *GoWS) GetOwnId() types.JID {
+	if gows == nil {
+		return types.EmptyJID
+	}
+	id := gows.Store.ID
+	if id == nil {
+		return types.EmptyJID
+	}
+	return *id
+}
+
+type ConnectedEventData struct {
+	ID       *types.JID
+	PushName string
 }

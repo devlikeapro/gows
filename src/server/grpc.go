@@ -10,6 +10,7 @@ import (
 	"go.mau.fi/whatsmeow"
 	"go.mau.fi/whatsmeow/proto/waE2E"
 	"go.mau.fi/whatsmeow/types"
+	"go.mau.fi/whatsmeow/types/events"
 	"google.golang.org/grpc"
 	"log"
 	"reflect"
@@ -75,18 +76,31 @@ func (s *Server) GetProfilePicture(ctx context.Context, req *pb.ProfilePictureRe
 
 func (s *Server) StreamEvents(req *pb.Empty, stream grpc.ServerStreamingServer[pb.EventJson]) error {
 	for event := range s.EventChannel {
-		jsonData, err := json.Marshal(event)
-		if err != nil {
-			continue
-		}
-
 		// Remove * at the start if it's *
 		eventType := reflect.TypeOf(event).String()
 		eventType = strings.TrimPrefix(eventType, "*")
 
+		var eventData interface{}
+		switch event.(type) {
+		case *events.Connected:
+			eventData = &gows.ConnectedEventData{
+				ID:       s.Gows.Store.ID,
+				PushName: s.Gows.Store.PushName,
+			}
+
+		default:
+			eventData = event
+		}
+
+		jsonData, err := json.Marshal(eventData)
+		if err != nil {
+			continue
+		}
+
 		data := pb.EventJson{
-			Event: eventType,
-			Data:  string(jsonData),
+			Session: "default", // TODO: Extract session
+			Event:   eventType,
+			Data:    string(jsonData),
 		}
 		err = stream.Send(&data)
 		if err != nil {
