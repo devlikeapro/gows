@@ -85,7 +85,7 @@ func (s *Server) StreamEvents(req *pb.Empty, stream grpc.ServerStreamingServer[p
 		eventType = strings.TrimPrefix(eventType, "*")
 
 		data := pb.EventJson{
-			Event: reflect.TypeOf(event).String(),
+			Event: eventType,
 			Data:  string(jsonData),
 		}
 		err = stream.Send(&data)
