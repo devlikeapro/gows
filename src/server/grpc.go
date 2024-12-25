@@ -56,6 +56,22 @@ func (s *Server) SendText(ctx context.Context, req *pb.TextMessageRequest) (*pb.
 
 	return &pb.MessageResponse{Id: res.ID, Timestamp: time.Now().Unix()}, nil
 }
+func (s *Server) GetProfilePicture(ctx context.Context, req *pb.ProfilePictureRequest) (*pb.ProfilePictureResponse, error) {
+	jid, err := types.ParseJID(req.GetJid())
+	if err != nil {
+		return nil, err
+	}
+
+	cli := s.Gows
+	info, err := cli.GetProfilePictureInfo(jid, &whatsmeow.GetProfilePictureParams{
+		Preview: false,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.ProfilePictureResponse{Url: info.URL}, nil
+}
 
 func (s *Server) StreamEvents(req *pb.Empty, stream grpc.ServerStreamingServer[pb.EventJson]) error {
 	for event := range s.EventChannel {
