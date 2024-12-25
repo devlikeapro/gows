@@ -3,7 +3,6 @@ package server
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"github.com/devlikeapro/noweb2/gows"
 	pb "github.com/devlikeapro/noweb2/proto"
 	"github.com/golang/protobuf/proto"
@@ -12,7 +11,6 @@ import (
 	"go.mau.fi/whatsmeow/types"
 	"go.mau.fi/whatsmeow/types/events"
 	"google.golang.org/grpc"
-	"log"
 	"reflect"
 	"strings"
 	"time"
@@ -22,21 +20,33 @@ type Server struct {
 	pb.UnimplementedMessageServiceServer
 	pb.UnimplementedEventStreamServer
 	EventChannel chan interface{}
-	Gows         *gows.GoWS
+	Sm           *gows.SessionManager
 }
 
-func (s *Server) StartSession(ctx context.Context, req *pb.Session) (*pb.Empty, error) {
-	log.Printf("Starting session...")
-	err := s.Gows.Start()
-	if !errors.Is(err, whatsmeow.ErrAlreadyConnected) {
+func (s *Server) StartSession(ctx context.Context, req *pb.StartSessionRequest) (*pb.Empty, error) {
+	dialect := req.Dialect
+	address := req.Address + "?_foreign_keys=on"
+
+	cli, err := s.Sm.Start(req.GetId(), dialect, address)
+	if err != nil {
 		return nil, err
 	}
+
+	// Subscribe to events
+	cli.AddEventHandler(s.IssueEvent)
+
+	// Subscribe to QrChan events
+	go func() {
+		for evt := range cli.QrChan {
+			s.IssueEvent(evt)
+		}
+	}()
+
 	return &pb.Empty{}, nil
 }
 
 func (s *Server) StopSession(ctx context.Context, req *pb.Session) (*pb.Empty, error) {
-	log.Printf("Stopping session...")
-	s.Gows.Stop()
+	s.Sm.Stop(req.GetId())
 	return &pb.Empty{}, nil
 }
 
@@ -45,8 +55,11 @@ func (s *Server) SendText(ctx context.Context, req *pb.TextMessageRequest) (*pb.
 	if err != nil {
 		return nil, err
 	}
+	cli, err := s.Sm.Get(req.GetSession().GetId())
+	if err != nil {
+		return nil, err
+	}
 
-	cli := s.Gows
 	res, err := cli.SendMessage(context.Background(), jid, &waE2E.Message{
 		Conversation: proto.String(req.GetText()),
 	})
@@ -63,7 +76,10 @@ func (s *Server) GetProfilePicture(ctx context.Context, req *pb.ProfilePictureRe
 		return nil, err
 	}
 
-	cli := s.Gows
+	cli, err := s.Sm.Get(req.GetSession().GetId())
+	if err != nil {
+		return nil, err
+	}
 	info, err := cli.GetProfilePictureInfo(jid, &whatsmeow.GetProfilePictureParams{
 		Preview: false,
 	})
@@ -80,12 +96,19 @@ func (s *Server) StreamEvents(req *pb.Empty, stream grpc.ServerStreamingServer[p
 		eventType := reflect.TypeOf(event).String()
 		eventType = strings.TrimPrefix(eventType, "*")
 
+		//TODO: Extract session
+		name := "default"
+		cli, err := s.Sm.Get(name)
+		if err != nil {
+			continue
+		}
+
 		var eventData interface{}
 		switch event.(type) {
 		case *events.Connected:
 			eventData = &gows.ConnectedEventData{
-				ID:       s.Gows.Store.ID,
-				PushName: s.Gows.Store.PushName,
+				ID:       cli.Store.ID,
+				PushName: cli.Store.PushName,
 			}
 
 		default:
@@ -98,7 +121,7 @@ func (s *Server) StreamEvents(req *pb.Empty, stream grpc.ServerStreamingServer[p
 		}
 
 		data := pb.EventJson{
-			Session: "default", // TODO: Extract session
+			Session: name,
 			Event:   eventType,
 			Data:    string(jsonData),
 		}

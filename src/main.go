@@ -2,16 +2,13 @@ package main
 
 import (
 	"flag"
-	gows2 "github.com/devlikeapro/noweb2/gows"
+	"github.com/devlikeapro/noweb2/gows"
 	pb "github.com/devlikeapro/noweb2/proto"
 	"github.com/devlikeapro/noweb2/server"
-	"github.com/devlikeapro/noweb2/service"
 	"google.golang.org/grpc"
 	"log"
 	"net"
 	"os"
-
-	_ "github.com/mattn/go-sqlite3" // Import the SQLite drive
 )
 
 func listenSocket(path string) *net.Listener {
@@ -26,23 +23,15 @@ func listenSocket(path string) *net.Listener {
 	return &listener
 }
 
-func buildGrpcServer(gows *gows2.GoWS) *grpc.Server {
+func buildGrpcServer() *grpc.Server {
 	grpcServer := grpc.NewServer()
 	srv := server.Server{
-		Gows:         gows,
+		Sm:           gows.NewSessionManager(),
 		EventChannel: make(chan interface{}, 100),
 	}
-
 	// Add an event handler to the client
 	pb.RegisterMessageServiceServer(grpcServer, &srv)
 	pb.RegisterEventStreamServer(grpcServer, &srv)
-	gows.AddEventHandler(srv.IssueEvent)
-	// Subscribe to QrChan events
-	go func() {
-		for evt := range gows.QrChan {
-			srv.IssueEvent(evt)
-		}
-	}()
 	return grpcServer
 }
 
@@ -54,10 +43,8 @@ func init() {
 
 func main() {
 	flag.Parse()
-	// Start the gows session
-	gows := service.BuildSession()
 	// Build the server
-	grpcServer := buildGrpcServer(gows)
+	grpcServer := buildGrpcServer()
 	// Open unix socket
 	log.Println("Opening socket", socket)
 	listener := listenSocket(socket)
