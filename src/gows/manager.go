@@ -26,6 +26,16 @@ func NewSessionManager() *SessionManager {
 func (sm *SessionManager) Start(name string, dialect string, address string) (*GoWS, error) {
 	sm.sessionsLock.Lock()
 	defer sm.sessionsLock.Unlock()
+	gows, err := sm.unlockedStart(name, dialect, address)
+	if err != nil {
+		log.Printf("Error starting session '%s': %v", name, err)
+		sm.unlockedStop(name)
+		return nil, err
+	}
+	return gows, nil
+}
+
+func (sm *SessionManager) unlockedStart(name string, dialect string, address string) (*GoWS, error) {
 	log.Printf("Starting session '%s'...", name)
 	if goWS, ok := sm.sessions[name]; ok {
 		return goWS, nil
@@ -35,12 +45,11 @@ func (sm *SessionManager) Start(name string, dialect string, address string) (*G
 	if err != nil {
 		return nil, err
 	}
-
+	sm.sessions[name] = gows
 	err = gows.Start()
 	if err != nil && !errors.Is(err, whatsmeow.ErrAlreadyConnected) {
 		return nil, err
 	}
-	sm.sessions[name] = gows
 	log.Printf("Session started '%s'", name)
 	return gows, nil
 }
@@ -57,10 +66,13 @@ func (sm *SessionManager) Get(name string) (*GoWS, error) {
 }
 
 func (sm *SessionManager) Stop(name string) {
-	log.Printf("Stopping session '%s'...", name)
 	sm.sessionsLock.Lock()
 	defer sm.sessionsLock.Unlock()
+	sm.unlockedStop(name)
+}
 
+func (sm *SessionManager) unlockedStop(name string) {
+	log.Printf("Stopping session '%s'...", name)
 	if goWS, ok := sm.sessions[name]; ok {
 		goWS.Stop()
 		delete(sm.sessions, name)
