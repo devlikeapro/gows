@@ -1,6 +1,7 @@
 package gows
 
 import (
+	"context"
 	"errors"
 	"go.mau.fi/whatsmeow"
 	"log"
@@ -23,14 +24,19 @@ func NewSessionManager() *SessionManager {
 }
 
 func (sm *SessionManager) Start(name string, dialect string, address string) (*GoWS, error) {
-	log.Printf("Starting session '%s'...", name)
 	sm.sessionsLock.Lock()
 	defer sm.sessionsLock.Unlock()
+	log.Printf("Starting session '%s'...", name)
 	if goWS, ok := sm.sessions[name]; ok {
 		return goWS, nil
 	}
-	gows := BuildSession(dialect, address)
-	err := gows.Start()
+	ctx := context.WithValue(context.Background(), "name", name)
+	gows, err := BuildSession(ctx, dialect, address)
+	if err != nil {
+		return nil, err
+	}
+
+	err = gows.Start()
 	if err != nil && !errors.Is(err, whatsmeow.ErrAlreadyConnected) {
 		return nil, err
 	}

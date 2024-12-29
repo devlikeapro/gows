@@ -96,16 +96,17 @@ func (s *Server) StreamEvents(req *pb.Empty, stream grpc.ServerStreamingServer[p
 		eventType := reflect.TypeOf(event).String()
 		eventType = strings.TrimPrefix(eventType, "*")
 
-		//TODO: Extract session
+		// TODO: Extract session name
 		name := "default"
-		cli, err := s.Sm.Get(name)
-		if err != nil {
-			continue
-		}
 
 		var eventData interface{}
 		switch event.(type) {
 		case *events.Connected:
+			cli, err := s.Sm.Get(name)
+			if err != nil {
+				continue
+			}
+
 			eventData = &gows.ConnectedEventData{
 				ID:       cli.Store.ID,
 				PushName: cli.Store.PushName,
