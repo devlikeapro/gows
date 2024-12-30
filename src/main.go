@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"github.com/devlikeapro/noweb2/gows"
 	pb "github.com/devlikeapro/noweb2/proto"
 	"github.com/devlikeapro/noweb2/server"
 	"google.golang.org/grpc"
@@ -25,13 +24,10 @@ func listenSocket(path string) *net.Listener {
 
 func buildGrpcServer() *grpc.Server {
 	grpcServer := grpc.NewServer()
-	srv := server.Server{
-		Sm:           gows.NewSessionManager(),
-		EventChannel: make(chan interface{}, 100),
-	}
+	srv := server.NewServer()
 	// Add an event handler to the client
-	pb.RegisterMessageServiceServer(grpcServer, &srv)
-	pb.RegisterEventStreamServer(grpcServer, &srv)
+	pb.RegisterMessageServiceServer(grpcServer, srv)
+	pb.RegisterEventStreamServer(grpcServer, srv)
 	return grpcServer
 }
 

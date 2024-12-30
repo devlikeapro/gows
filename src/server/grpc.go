@@ -6,20 +6,32 @@ import (
 	"github.com/devlikeapro/noweb2/gows"
 	pb "github.com/devlikeapro/noweb2/proto"
 	"github.com/golang/protobuf/proto"
+	"github.com/google/uuid"
 	"go.mau.fi/whatsmeow"
 	"go.mau.fi/whatsmeow/proto/waE2E"
 	"go.mau.fi/whatsmeow/types"
 	"google.golang.org/grpc"
 	"reflect"
 	"strings"
+	"sync"
 	"time"
 )
 
 type Server struct {
 	pb.UnimplementedMessageServiceServer
 	pb.UnimplementedEventStreamServer
-	EventChannel chan interface{}
-	Sm           *gows.SessionManager
+	Sm *gows.SessionManager
+
+	listeners     map[uuid.UUID]chan interface{}
+	listenersLock sync.RWMutex
+}
+
+func NewServer() *Server {
+	return &Server{
+		Sm:            gows.NewSessionManager(),
+		listeners:     make(map[uuid.UUID]chan interface{}),
+		listenersLock: sync.RWMutex{},
+	}
 }
 
 func (s *Server) StartSession(ctx context.Context, req *pb.StartSessionRequest) (*pb.Empty, error) {
@@ -86,8 +98,41 @@ func (s *Server) GetProfilePicture(ctx context.Context, req *pb.ProfilePictureRe
 	return &pb.ProfilePictureResponse{Url: info.URL}, nil
 }
 
+func (s *Server) addListener(id uuid.UUID) chan interface{} {
+	s.listenersLock.Lock()
+	defer s.listenersLock.Unlock()
+
+	listener := make(chan interface{}, 10)
+	s.listeners[id] = listener
+	return listener
+}
+
+func (s *Server) removeListener(id uuid.UUID) {
+	s.listenersLock.Lock()
+	defer s.listenersLock.Unlock()
+	listener, ok := s.listeners[id]
+	if !ok {
+		return
+	}
+	delete(s.listeners, id)
+	close(listener)
+}
+func (s *Server) getListeners() []chan interface{} {
+	s.listenersLock.RLock()
+	defer s.listenersLock.RUnlock()
+	listeners := make([]chan interface{}, 0, len(s.listeners))
+	for _, listener := range s.listeners {
+		listeners = append(listeners, listener)
+	}
+	return listeners
+}
+
 func (s *Server) StreamEvents(req *pb.Empty, stream grpc.ServerStreamingServer[pb.EventJson]) error {
-	for event := range s.EventChannel {
+	streamId := uuid.New()
+	listener := s.addListener(streamId)
+	defer s.removeListener(streamId)
+
+	for event := range listener {
 		// Remove * at the start if it's *
 		eventType := reflect.TypeOf(event).String()
 		eventType = strings.TrimPrefix(eventType, "*")
@@ -114,5 +159,15 @@ func (s *Server) StreamEvents(req *pb.Empty, stream grpc.ServerStreamingServer[p
 }
 
 func (s *Server) IssueEvent(event interface{}) {
-	s.EventChannel <- event
+	listeners := s.getListeners()
+	for _, listener := range listeners {
+		go func() {
+			defer func() {
+				if r := recover(); r != nil {
+					// Ignore panics
+				}
+			}()
+			listener <- event
+		}()
+	}
 }
