@@ -2,13 +2,12 @@ package gows
 
 import (
 	"context"
+	_ "github.com/mattn/go-sqlite3" // Import the SQLite drive
 	"go.mau.fi/whatsmeow"
 	"go.mau.fi/whatsmeow/store/sqlstore"
 	"go.mau.fi/whatsmeow/types"
 	"go.mau.fi/whatsmeow/types/events"
 	waLog "go.mau.fi/whatsmeow/util/log"
-
-	_ "github.com/mattn/go-sqlite3" // Import the SQLite drive
 )
 
 // GoWS it's Go WebSocket or WhatSapp ;)
@@ -40,9 +39,10 @@ func (gows *GoWS) handleEvent(event interface{}) {
 }
 
 func (gows *GoWS) Start() error {
+	gows.AddEventHandler(gows.handleEvent)
+
 	// Already logged in, just connect
 	if gows.Store.ID != nil {
-		gows.AddEventHandler(gows.handleEvent)
 		return gows.Connect()
 	}
 
@@ -56,12 +56,14 @@ func (gows *GoWS) Start() error {
 			case <-gows.Context.Done():
 				return
 			case qr := <-qrChan:
+				// If the event is empty, we should stop the goroutine
+				if qr.Event == "" {
+					return
+				}
 				gows.Events <- qr
 			}
 		}
 	}()
-
-	gows.AddEventHandler(gows.handleEvent)
 	return gows.Connect()
 }
 
