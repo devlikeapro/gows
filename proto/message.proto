@@ -7,6 +7,7 @@ option go_package = "/";
 service MessageService {
   rpc StartSession(StartSessionRequest) returns (Empty);
   rpc StopSession(Session) returns (Empty);
+  rpc RequestCode(PairCodeRequest) returns (PairCodeResponse);
   rpc Logout(Session) returns (Empty);
   rpc SendText (TextMessageRequest) returns (MessageResponse);
   rpc GetProfilePicture (ProfilePictureRequest) returns (ProfilePictureResponse);
@@ -14,6 +15,15 @@ service MessageService {
 
 service EventStream {
   rpc StreamEvents(Session) returns (stream EventJson);
+}
+
+message PairCodeRequest {
+  Session session = 1;
+  string phone = 2;
+}
+
+message PairCodeResponse {
+  string code = 1;
 }
 
 message Empty {}

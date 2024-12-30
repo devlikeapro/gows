@@ -61,6 +61,23 @@ func (s *Server) StopSession(ctx context.Context, req *pb.Session) (*pb.Empty, e
 	return &pb.Empty{}, nil
 }
 
+func (s *Server) RequestCode(ctx context.Context, req *pb.PairCodeRequest) (*pb.PairCodeResponse, error) {
+	cli, err := s.Sm.Get(req.GetSession().GetId())
+	if err != nil {
+		return nil, err
+	}
+	code, err := cli.PairPhone(
+		req.GetPhone(),
+		true,
+		whatsmeow.PairClientChrome,
+		"Chrome (Linux)",
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &pb.PairCodeResponse{Code: code}, nil
+}
+
 func (s *Server) Logout(ctx context.Context, req *pb.Session) (*pb.Empty, error) {
 	cli, err := s.Sm.Get(req.GetId())
 	if err != nil {
