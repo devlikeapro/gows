@@ -7,6 +7,7 @@ option go_package = "/";
 service MessageService {
   rpc StartSession(StartSessionRequest) returns (Empty);
   rpc StopSession(Session) returns (Empty);
+  rpc Logout(Session) returns (Empty);
   rpc SendText (TextMessageRequest) returns (MessageResponse);
   rpc GetProfilePicture (ProfilePictureRequest) returns (ProfilePictureResponse);
 }

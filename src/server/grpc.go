@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"github.com/devlikeapro/noweb2/gows"
 	pb "github.com/devlikeapro/noweb2/proto"
 	"github.com/golang/protobuf/proto"
@@ -60,6 +61,22 @@ func (s *Server) StopSession(ctx context.Context, req *pb.Session) (*pb.Empty, e
 	return &pb.Empty{}, nil
 }
 
+func (s *Server) Logout(ctx context.Context, req *pb.Session) (*pb.Empty, error) {
+	cli, err := s.Sm.Get(req.GetId())
+	if err != nil {
+		return nil, err
+	}
+	err = cli.Logout()
+	if err != nil {
+		if errors.Is(err, whatsmeow.ErrNotLoggedIn) {
+			// Ignore not logged in error
+			return &pb.Empty{}, nil
+		}
+		return nil, err
+	}
+	return &pb.Empty{}, nil
+}
+
 func (s *Server) SendText(ctx context.Context, req *pb.TextMessageRequest) (*pb.MessageResponse, error) {
 	jid, err := types.ParseJID(req.GetJid())
 	if err != nil {
@@ -80,6 +97,7 @@ func (s *Server) SendText(ctx context.Context, req *pb.TextMessageRequest) (*pb.
 
 	return &pb.MessageResponse{Id: res.ID, Timestamp: time.Now().Unix()}, nil
 }
+
 func (s *Server) GetProfilePicture(ctx context.Context, req *pb.ProfilePictureRequest) (*pb.ProfilePictureResponse, error) {
 	jid, err := types.ParseJID(req.GetJid())
 	if err != nil {
