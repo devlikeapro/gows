@@ -22,14 +22,15 @@ type Server struct {
 	pb.UnimplementedEventStreamServer
 	Sm *gows.SessionManager
 
-	listeners     map[uuid.UUID]chan interface{}
+	// session id -> id -> event channel
+	listeners     map[string]map[uuid.UUID]chan interface{}
 	listenersLock sync.RWMutex
 }
 
 func NewServer() *Server {
 	return &Server{
 		Sm:            gows.NewSessionManager(),
-		listeners:     make(map[uuid.UUID]chan interface{}),
+		listeners:     map[string]map[uuid.UUID]chan interface{}{},
 		listenersLock: sync.RWMutex{},
 	}
 }
@@ -38,7 +39,8 @@ func (s *Server) StartSession(ctx context.Context, req *pb.StartSessionRequest) 
 	dialect := req.Dialect
 	address := req.Address + "?_foreign_keys=on"
 
-	cli, err := s.Sm.Start(req.GetId(), dialect, address)
+	session := req.GetId()
+	cli, err := s.Sm.Start(session, dialect, address)
 	if err != nil {
 		return nil, err
 	}
@@ -46,7 +48,7 @@ func (s *Server) StartSession(ctx context.Context, req *pb.StartSessionRequest) 
 	// Subscribe to events
 	go func() {
 		for evt := range cli.Events {
-			s.IssueEvent(evt)
+			s.IssueEvent(session, evt)
 		}
 	}()
 
@@ -98,47 +100,55 @@ func (s *Server) GetProfilePicture(ctx context.Context, req *pb.ProfilePictureRe
 	return &pb.ProfilePictureResponse{Url: info.URL}, nil
 }
 
-func (s *Server) addListener(id uuid.UUID) chan interface{} {
+func (s *Server) addListener(session string, id uuid.UUID) chan interface{} {
 	s.listenersLock.Lock()
 	defer s.listenersLock.Unlock()
 
 	listener := make(chan interface{}, 10)
-	s.listeners[id] = listener
+	sessionListeners, ok := s.listeners[session]
+	if !ok {
+		sessionListeners = map[uuid.UUID]chan interface{}{}
+		s.listeners[session] = sessionListeners
+	}
+	sessionListeners[id] = listener
 	return listener
 }
 
-func (s *Server) removeListener(id uuid.UUID) {
+func (s *Server) removeListener(session string, id uuid.UUID) {
 	s.listenersLock.Lock()
 	defer s.listenersLock.Unlock()
-	listener, ok := s.listeners[id]
+	listener, ok := s.listeners[session][id]
 	if !ok {
 		return
 	}
-	delete(s.listeners, id)
+	delete(s.listeners[session], id)
+	// if it's the last listener, remove the session
+	if len(s.listeners[session]) == 0 {
+		delete(s.listeners, session)
+	}
 	close(listener)
 }
-func (s *Server) getListeners() []chan interface{} {
+
+func (s *Server) getListeners(session string) []chan interface{} {
 	s.listenersLock.RLock()
 	defer s.listenersLock.RUnlock()
 	listeners := make([]chan interface{}, 0, len(s.listeners))
-	for _, listener := range s.listeners {
+	for _, listener := range s.listeners[session] {
 		listeners = append(listeners, listener)
 	}
 	return listeners
 }
 
-func (s *Server) StreamEvents(req *pb.Empty, stream grpc.ServerStreamingServer[pb.EventJson]) error {
+func (s *Server) StreamEvents(req *pb.Session, stream grpc.ServerStreamingServer[pb.EventJson]) error {
+	name := req.GetId()
 	streamId := uuid.New()
-	listener := s.addListener(streamId)
-	defer s.removeListener(streamId)
+	listener := s.addListener(name, streamId)
+	defer s.removeListener(name, streamId)
 
 	for event := range listener {
 		// Remove * at the start if it's *
 		eventType := reflect.TypeOf(event).String()
 		eventType = strings.TrimPrefix(eventType, "*")
-
-		// TODO: Extract session name
-		name := "default"
 
 		jsonData, err := json.Marshal(event)
 		if err != nil {
@@ -158,8 +168,8 @@ func (s *Server) StreamEvents(req *pb.Empty, stream grpc.ServerStreamingServer[p
 	return nil
 }
 
-func (s *Server) IssueEvent(event interface{}) {
-	listeners := s.getListeners()
+func (s *Server) IssueEvent(session string, event interface{}) {
+	listeners := s.getListeners(session)
 	for _, listener := range listeners {
 		go func() {
 			defer func() {

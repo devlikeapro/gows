@@ -12,7 +12,7 @@ service MessageService {
 }
 
 service EventStream {
-  rpc StreamEvents(Empty) returns (stream EventJson);
+  rpc StreamEvents(Session) returns (stream EventJson);
 }
 
 message Empty {}
