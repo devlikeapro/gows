@@ -9,7 +9,6 @@ import (
 	"go.mau.fi/whatsmeow"
 	"go.mau.fi/whatsmeow/proto/waE2E"
 	"go.mau.fi/whatsmeow/types"
-	"go.mau.fi/whatsmeow/types/events"
 	"google.golang.org/grpc"
 	"reflect"
 	"strings"
@@ -33,11 +32,8 @@ func (s *Server) StartSession(ctx context.Context, req *pb.StartSessionRequest) 
 	}
 
 	// Subscribe to events
-	cli.AddEventHandler(s.IssueEvent)
-
-	// Subscribe to QrChan events
 	go func() {
-		for evt := range cli.QrChan {
+		for evt := range cli.Events {
 			s.IssueEvent(evt)
 		}
 	}()
@@ -99,24 +95,7 @@ func (s *Server) StreamEvents(req *pb.Empty, stream grpc.ServerStreamingServer[p
 		// TODO: Extract session name
 		name := "default"
 
-		var eventData interface{}
-		switch event.(type) {
-		case *events.Connected:
-			cli, err := s.Sm.Get(name)
-			if err != nil {
-				continue
-			}
-
-			eventData = &gows.ConnectedEventData{
-				ID:       cli.Store.ID,
-				PushName: cli.Store.PushName,
-			}
-
-		default:
-			eventData = event
-		}
-
-		jsonData, err := json.Marshal(eventData)
+		jsonData, err := json.Marshal(event)
 		if err != nil {
 			continue
 		}

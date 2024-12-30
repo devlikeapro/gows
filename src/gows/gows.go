@@ -5,6 +5,7 @@ import (
 	"go.mau.fi/whatsmeow"
 	"go.mau.fi/whatsmeow/store/sqlstore"
 	"go.mau.fi/whatsmeow/types"
+	"go.mau.fi/whatsmeow/types/events"
 	waLog "go.mau.fi/whatsmeow/util/log"
 
 	_ "github.com/mattn/go-sqlite3" // Import the SQLite drive
@@ -13,38 +14,55 @@ import (
 // GoWS it's Go WebSocket or WhatSapp ;)
 type GoWS struct {
 	*whatsmeow.Client
-	QrChan  chan whatsmeow.QRChannelItem
 	Context context.Context
+	Events  chan interface{}
 
 	cancelContext context.CancelFunc
 	container     *sqlstore.Container
 }
 
+func (gows *GoWS) handleEvent(event interface{}) {
+	var data interface{}
+	switch event.(type) {
+	case *events.Connected:
+		// Populate the ConnectedEventData with the ID and PushName
+		data = &ConnectedEventData{
+			ID:       gows.Store.ID,
+			PushName: gows.Store.PushName,
+		}
+
+	default:
+		data = event
+	}
+
+	// reissue from Events to client
+	gows.Events <- data
+}
+
 func (gows *GoWS) Start() error {
 	// Already logged in, just connect
 	if gows.Store.ID != nil {
+		gows.AddEventHandler(gows.handleEvent)
 		return gows.Connect()
 	}
 
 	// No ID stored, new login
 	qrChan, _ := gows.GetQRChannel(gows.Context)
-	// reissue from QrChan to gows.QrChan
+
+	// reissue from QrChan to Events
 	go func() {
 		for {
 			select {
 			case <-gows.Context.Done():
 				return
 			case qr := <-qrChan:
-				gows.QrChan <- qr
+				gows.Events <- qr
 			}
 		}
 	}()
 
-	err := gows.Connect()
-	if err != nil {
-		return err
-	}
-	return nil
+	gows.AddEventHandler(gows.handleEvent)
+	return gows.Connect()
 }
 
 func (gows *GoWS) Stop() {
@@ -91,8 +109,8 @@ func BuildSession(ctx context.Context, dialect string, address string) (*GoWS, e
 	client := whatsmeow.NewClient(deviceStore, log)
 	gows := GoWS{
 		client,
-		make(chan whatsmeow.QRChannelItem, 8),
 		ctx,
+		make(chan interface{}, 10),
 		cancel,
 		container,
 	}
