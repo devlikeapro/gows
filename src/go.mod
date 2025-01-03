@@ -1,4 +1,4 @@
-module github.com/devlikeapro/noweb2
+module github.com/devlikeapro/gows
 
 go 1.23.3
 
