@@ -3,6 +3,7 @@ package gows
 import (
 	"context"
 	"errors"
+	gowsLog "github.com/devlikeapro/noweb2/log"
 	"go.mau.fi/whatsmeow"
 	"go.mau.fi/whatsmeow/binary/proto"
 	"go.mau.fi/whatsmeow/store"
@@ -29,7 +30,7 @@ func NewSessionManager() *SessionManager {
 	return &SessionManager{
 		sessions:     make(map[string]*GoWS),
 		sessionsLock: &sync.RWMutex{},
-		log:          waLog.Stdout("Manager", "DEBUG", false),
+		log:          gowsLog.Stdout("Manager", "DEBUG", false),
 	}
 }
 
@@ -51,7 +52,7 @@ func (sm *SessionManager) unlockedStart(name string, dialect string, address str
 		return goWS, nil
 	}
 	ctx := context.WithValue(context.Background(), "name", name)
-	log := waLog.Stdout(name, "DEBUG", false)
+	log := gowsLog.Stdout(name, "DEBUG", false)
 	gows, err := BuildSession(ctx, log, dialect, address)
 	if err != nil {
 		return nil, err

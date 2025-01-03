@@ -2,26 +2,23 @@ package main
 
 import (
 	"flag"
+	gowsLog "github.com/devlikeapro/noweb2/log"
 	pb "github.com/devlikeapro/noweb2/proto"
 	"github.com/devlikeapro/noweb2/server"
+	waLog "go.mau.fi/whatsmeow/util/log"
 	"google.golang.org/grpc"
-	"log"
 	"net"
 	"os"
 )
 
-func init() {
-	log.SetOutput(os.Stdout)
-}
-
-func listenSocket(path string) *net.Listener {
-	log.Println("Server is listening on", path)
+func listenSocket(log waLog.Logger, path string) *net.Listener {
+	log.Infof("Server is listening on %s", path)
 	// Force remove the socket file
 	_ = os.Remove(path)
 	// Listen on a specified port
 	listener, err := net.Listen("unix", path)
 	if err != nil {
-		log.Fatalf("Failed to listen: %v", err)
+		log.Errorf("Failed to listen: %v", err)
 	}
 	return &listener
 }
@@ -43,15 +40,16 @@ func init() {
 
 func main() {
 	flag.Parse()
+	log := gowsLog.Stdout("Server", "DEBUG", false)
 	// Build the server
 	grpcServer := buildGrpcServer()
 	// Open unix socket
-	log.Println("Opening socket", socket)
-	listener := listenSocket(socket)
+	log.Infof("Opening socket %s", socket)
+	listener := listenSocket(log, socket)
 
 	// Start the server
-	log.Println("gRPC server started!")
+	log.Infof("gRPC server started!")
 	if err := grpcServer.Serve(*listener); err != nil {
-		log.Fatalf("Failed to serve: %v", err)
+		log.Errorf("Failed to serve: %v", err)
 	}
 }
