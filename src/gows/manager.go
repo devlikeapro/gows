@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"go.mau.fi/whatsmeow"
+	"go.mau.fi/whatsmeow/binary/proto"
+	"go.mau.fi/whatsmeow/store"
 	"log"
 	"sync"
 )
@@ -14,6 +16,12 @@ var ErrSessionNotFound = errors.New("session not found")
 type SessionManager struct {
 	sessions     map[string]*GoWS
 	sessionsLock *sync.RWMutex
+}
+
+func init() {
+	// Firefox (Ubuntu)
+	store.DeviceProps.PlatformType = proto.DeviceProps_FIREFOX.Enum()
+	store.SetOSInfo("Ubuntu", [3]uint32{22, 0, 4})
 }
 
 func NewSessionManager() *SessionManager {
