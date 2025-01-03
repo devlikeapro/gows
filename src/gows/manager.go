@@ -6,7 +6,7 @@ import (
 	"go.mau.fi/whatsmeow"
 	"go.mau.fi/whatsmeow/binary/proto"
 	"go.mau.fi/whatsmeow/store"
-	"log"
+	waLog "go.mau.fi/whatsmeow/util/log"
 	"sync"
 )
 
@@ -16,6 +16,7 @@ var ErrSessionNotFound = errors.New("session not found")
 type SessionManager struct {
 	sessions     map[string]*GoWS
 	sessionsLock *sync.RWMutex
+	log          waLog.Logger
 }
 
 func init() {
@@ -28,6 +29,7 @@ func NewSessionManager() *SessionManager {
 	return &SessionManager{
 		sessions:     make(map[string]*GoWS),
 		sessionsLock: &sync.RWMutex{},
+		log:          waLog.Stdout("Manager", "DEBUG", false),
 	}
 }
 
@@ -36,7 +38,7 @@ func (sm *SessionManager) Start(name string, dialect string, address string) (*G
 	defer sm.sessionsLock.Unlock()
 	gows, err := sm.unlockedStart(name, dialect, address)
 	if err != nil {
-		log.Printf("Error starting session '%s': %v", name, err)
+		sm.log.Errorf("Error starting session '%s': %v", name, err)
 		sm.unlockedStop(name)
 		return nil, err
 	}
@@ -44,12 +46,13 @@ func (sm *SessionManager) Start(name string, dialect string, address string) (*G
 }
 
 func (sm *SessionManager) unlockedStart(name string, dialect string, address string) (*GoWS, error) {
-	log.Printf("Starting session '%s'...", name)
+	sm.log.Infof("Starting session '%s'...", name)
 	if goWS, ok := sm.sessions[name]; ok {
 		return goWS, nil
 	}
 	ctx := context.WithValue(context.Background(), "name", name)
-	gows, err := BuildSession(ctx, dialect, address)
+	log := waLog.Stdout(name, "DEBUG", false)
+	gows, err := BuildSession(ctx, log, dialect, address)
 	if err != nil {
 		return nil, err
 	}
@@ -58,7 +61,7 @@ func (sm *SessionManager) unlockedStart(name string, dialect string, address str
 	if err != nil && !errors.Is(err, whatsmeow.ErrAlreadyConnected) {
 		return nil, err
 	}
-	log.Printf("Session started '%s'", name)
+	sm.log.Infof("Session started '%s'", name)
 	return gows, nil
 }
 
@@ -80,10 +83,10 @@ func (sm *SessionManager) Stop(name string) {
 }
 
 func (sm *SessionManager) unlockedStop(name string) {
-	log.Printf("Stopping session '%s'...", name)
+	sm.log.Infof("Stopping session '%s'...", name)
 	if goWS, ok := sm.sessions[name]; ok {
 		goWS.Stop()
 		delete(sm.sessions, name)
 	}
-	log.Printf("Session stopped '%s'", name)
+	sm.log.Infof("Session stopped '%s'", name)
 }

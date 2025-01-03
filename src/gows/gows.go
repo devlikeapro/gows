@@ -92,12 +92,9 @@ type ConnectedEventData struct {
 	PushName string
 }
 
-func BuildSession(ctx context.Context, dialect string, address string) (*GoWS, error) {
-	log := waLog.Stdout("Client", "DEBUG", true)
-	dbLog := waLog.Stdout("Database", "DEBUG", true)
-
+func BuildSession(ctx context.Context, log waLog.Logger, dialect string, address string) (*GoWS, error) {
 	// Prepare the database
-	container, err := sqlstore.New(dialect, address, dbLog)
+	container, err := sqlstore.New(dialect, address, log.Sub("Database"))
 	if err != nil {
 		return nil, err
 	}
@@ -108,7 +105,7 @@ func BuildSession(ctx context.Context, dialect string, address string) (*GoWS, e
 
 	// Create the client
 	ctx, cancel := context.WithCancel(ctx)
-	client := whatsmeow.NewClient(deviceStore, log)
+	client := whatsmeow.NewClient(deviceStore, log.Sub("Client"))
 	gows := GoWS{
 		client,
 		ctx,

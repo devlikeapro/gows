@@ -10,6 +10,10 @@ import (
 	"os"
 )
 
+func init() {
+	log.SetOutput(os.Stdout)
+}
+
 func listenSocket(path string) *net.Listener {
 	log.Println("Server is listening on", path)
 	// Force remove the socket file
