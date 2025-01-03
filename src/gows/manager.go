@@ -52,8 +52,8 @@ func (sm *SessionManager) unlockedStart(name string, dialect string, address str
 		return goWS, nil
 	}
 	ctx := context.WithValue(context.Background(), "name", name)
-	log := gowsLog.Stdout(name, "DEBUG", false)
-	gows, err := BuildSession(ctx, log, dialect, address)
+	log := gowsLog.Stdout("Session", "DEBUG", false)
+	gows, err := BuildSession(ctx, log.Sub(name), dialect, address)
 	if err != nil {
 		return nil, err
 	}

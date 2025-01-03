@@ -35,7 +35,7 @@ func (s *stdoutLogger) outputf(level, msg string, args ...interface{}) {
 		colorStart = colors[level]
 		colorReset = "\033[0m"
 	}
-	fmt.Printf("%s | [%s] %s%s\n", level, colorStart, s.mod, fmt.Sprintf(msg, args...), colorReset)
+	fmt.Printf("%s%s | [%s] %s%s\n", colorStart, level, s.mod, fmt.Sprintf(msg, args...), colorReset)
 }
 
 func (s *stdoutLogger) Errorf(msg string, args ...interface{}) { s.outputf("ERROR", msg, args...) }
