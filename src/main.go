@@ -46,7 +46,7 @@ func main() {
 	listener := listenSocket(socket)
 
 	// Start the server
-	log.Println("Starting gRPC server...")
+	log.Println("gRPC server started!")
 	if err := grpcServer.Serve(*listener); err != nil {
 		log.Fatalf("Failed to serve: %v", err)
 	}
