@@ -19,7 +19,8 @@ var colors = map[string]string{
 }
 
 var levelToInt = map[string]int{
-	"":      -1,
+	"":      -2,
+	"TRACE": -1,
 	"DEBUG": 0,
 	"INFO":  1,
 	"WARN":  2,
@@ -41,7 +42,15 @@ func (s *stdoutLogger) outputf(level, msg string, args ...interface{}) {
 func (s *stdoutLogger) Errorf(msg string, args ...interface{}) { s.outputf("ERROR", msg, args...) }
 func (s *stdoutLogger) Warnf(msg string, args ...interface{})  { s.outputf("WARN", msg, args...) }
 func (s *stdoutLogger) Infof(msg string, args ...interface{})  { s.outputf("INFO", msg, args...) }
-func (s *stdoutLogger) Debugf(msg string, args ...interface{}) { s.outputf("DEBUG", msg, args...) }
+func (s *stdoutLogger) Debugf(msg string, args ...interface{}) {
+	// If mod ends with Send or Recv - increase it to TRACE, too wordy
+	if strings.HasSuffix(s.mod, "Send") || strings.HasSuffix(s.mod, "Recv") {
+		s.outputf("TRACE", msg, args...)
+		return
+	}
+	s.outputf("DEBUG", msg, args...)
+}
+func (s *stdoutLogger) Tracef(msg string, args ...interface{}) { s.outputf("TRACE", msg, args...) }
 func (s *stdoutLogger) Sub(mod string) waLog.Logger {
 	return &stdoutLogger{mod: fmt.Sprintf("%s/%s", s.mod, mod), color: s.color, min: s.min}
 }
