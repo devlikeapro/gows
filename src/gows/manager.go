@@ -86,8 +86,13 @@ func (sm *SessionManager) Stop(name string) {
 func (sm *SessionManager) unlockedStop(name string) {
 	sm.log.Infof("Stopping session '%s'...", name)
 	if goWS, ok := sm.sessions[name]; ok {
+		sm.log.Debugf("Stop() for '%s'...", name)
 		goWS.Stop()
+		sm.log.Debugf("Stop() for '%s' done!", name)
+
+		sm.log.Debugf("Close() for '%s'...", name)
 		delete(sm.sessions, name)
+		sm.log.Debugf("Close() for '%s' done!", name)
 	}
 	sm.log.Infof("Session stopped '%s'", name)
 }
