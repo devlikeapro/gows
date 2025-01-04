@@ -68,9 +68,18 @@ func (gows *GoWS) Start() error {
 }
 
 func (gows *GoWS) Stop() {
+	gows.Log.Debugf("Disconnecting...")
 	gows.Disconnect()
+	gows.Log.Debugf("Disconnected")
+
+	gows.Log.Debugf("Canceling context...")
 	gows.cancelContext()
+	gows.Log.Debugf("Context canceled")
+
+	gows.Log.Debugf("Closing store container...")
 	err := gows.container.Close()
+	gows.Log.Debugf("Store container closed")
+
 	if err != nil {
 		gows.Log.Errorf("Error closing container: %v", err)
 	}
