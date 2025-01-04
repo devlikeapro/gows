@@ -103,9 +103,11 @@ func BuildSession(ctx context.Context, log waLog.Logger, dialect string, address
 		return nil, err
 	}
 
-	// Create the client
-	ctx, cancel := context.WithCancel(ctx)
+	// Configure the client
 	client := whatsmeow.NewClient(deviceStore, log.Sub("Client"))
+	client.AutomaticMessageRerequestFromPhone = true
+
+	ctx, cancel := context.WithCancel(ctx)
 	gows := GoWS{
 		client,
 		ctx,
