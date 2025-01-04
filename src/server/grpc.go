@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/devlikeapro/gows/gows"
 	pb "github.com/devlikeapro/gows/proto"
 	"github.com/golang/protobuf/proto"
@@ -225,8 +226,9 @@ func (s *Server) IssueEvent(session string, event interface{}) {
 	for _, listener := range listeners {
 		go func() {
 			defer func() {
-				if r := recover(); r != nil {
-					// Ignore panics
+				if err := recover(); err != nil {
+					// Print log error and ignore
+					fmt.Print("Error when sending event to listener: ", err)
 				}
 			}()
 			listener <- event
