@@ -128,6 +128,12 @@ func (s *Server) GetProfilePicture(ctx context.Context, req *pb.ProfilePictureRe
 	info, err := cli.GetProfilePictureInfo(jid, &whatsmeow.GetProfilePictureParams{
 		Preview: false,
 	})
+	if errors.Is(err, whatsmeow.ErrProfilePictureNotSet) {
+		return &pb.ProfilePictureResponse{Url: ""}, nil
+	}
+	if errors.Is(err, whatsmeow.ErrProfilePictureUnauthorized) {
+		return &pb.ProfilePictureResponse{Url: ""}, nil
+	}
 	if err != nil {
 		return nil, err
 	}
