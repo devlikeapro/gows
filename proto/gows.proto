@@ -7,6 +7,7 @@ option go_package = "/";
 service MessageService {
   rpc StartSession(StartSessionRequest) returns (Empty);
   rpc StopSession(Session) returns (Empty);
+  rpc GetSessionState(Session) returns (SessionStateResponse);
   rpc RequestCode(PairCodeRequest) returns (PairCodeResponse);
   rpc Logout(Session) returns (Empty);
   rpc SendText (TextMessageRequest) returns (MessageResponse);
@@ -38,6 +39,10 @@ message StartSessionRequest {
   string id = 1;
   string dialect = 2;
   string address = 3;
+}
+message SessionStateResponse {
+  bool found = 1;
+  bool connected = 2;
 }
 
 message Session {

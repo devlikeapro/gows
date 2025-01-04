@@ -61,6 +61,17 @@ func (s *Server) StopSession(ctx context.Context, req *pb.Session) (*pb.Empty, e
 	return &pb.Empty{}, nil
 }
 
+func (s *Server) GetSessionState(ctx context.Context, req *pb.Session) (*pb.SessionStateResponse, error) {
+	cli, err := s.Sm.Get(req.GetId())
+	if errors.Is(err, gows.ErrSessionNotFound) {
+		return &pb.SessionStateResponse{Found: false, Connected: false}, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &pb.SessionStateResponse{Found: true, Connected: cli.IsConnected()}, nil
+}
+
 func (s *Server) RequestCode(ctx context.Context, req *pb.PairCodeRequest) (*pb.PairCodeResponse, error) {
 	cli, err := s.Sm.Get(req.GetSession().GetId())
 	if err != nil {
