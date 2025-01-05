@@ -29,7 +29,7 @@ service MessageService {
   //
   // Actions
   //
-  rpc SendText (TextMessageRequest) returns (MessageResponse);
+  rpc SendMessage (MessageRequest) returns (MessageResponse);
   rpc GetProfilePicture (ProfilePictureRequest) returns (ProfilePictureResponse);
 }
 
@@ -86,7 +86,7 @@ message Session {
 //
 // Actions
 //
-message TextMessageRequest {
+message MessageRequest {
   Session session = 1;
   string jid = 2;
   string text = 3;

@@ -113,7 +113,7 @@ func (s *Server) Logout(ctx context.Context, req *pb.Session) (*pb.Empty, error)
 	return &pb.Empty{}, nil
 }
 
-func (s *Server) SendText(ctx context.Context, req *pb.TextMessageRequest) (*pb.MessageResponse, error) {
+func (s *Server) SendMessage(ctx context.Context, req *pb.MessageRequest) (*pb.MessageResponse, error) {
 	jid, err := types.ParseJID(req.GetJid())
 	if err != nil {
 		return nil, err
