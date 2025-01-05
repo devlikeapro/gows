@@ -43,7 +43,11 @@ func (s *Server) StartSession(ctx context.Context, req *pb.StartSessionRequest) 
 			Dialect: req.Config.Store.Dialect,
 			Address: req.Config.Store.Address + "?_foreign_keys=on",
 		},
+		Log: gows.LogConfig{
+			Level: req.Config.Log.Level.String(),
+		},
 	}
+
 	session := req.GetId()
 	cli, err := s.Sm.Start(session, cfg)
 	if err != nil {

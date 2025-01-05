@@ -25,8 +25,13 @@ type StoreConfig struct {
 	Address string
 }
 
+type LogConfig struct {
+	Level string
+}
+
 type SessionConfig struct {
 	Store StoreConfig
+	Log   LogConfig
 }
 
 func init() {
@@ -46,8 +51,7 @@ func NewSessionManager() *SessionManager {
 func (sm *SessionManager) Start(name string, cfg SessionConfig) (*GoWS, error) {
 	sm.sessionsLock.Lock()
 	defer sm.sessionsLock.Unlock()
-	sessionStore := cfg.Store
-	gows, err := sm.unlockedStart(name, sessionStore.Dialect, sessionStore.Address)
+	gows, err := sm.unlockedStart(name, cfg)
 	if err != nil {
 		sm.log.Errorf("Error starting session '%s': %v", name, err)
 		sm.unlockedStop(name)
@@ -56,13 +60,17 @@ func (sm *SessionManager) Start(name string, cfg SessionConfig) (*GoWS, error) {
 	return gows, nil
 }
 
-func (sm *SessionManager) unlockedStart(name string, dialect string, address string) (*GoWS, error) {
+func (sm *SessionManager) unlockedStart(name string, cfg SessionConfig) (*GoWS, error) {
 	sm.log.Infof("Starting session '%s'...", name)
 	if goWS, ok := sm.sessions[name]; ok {
 		return goWS, nil
 	}
+
 	ctx := context.WithValue(context.Background(), "name", name)
-	log := gowsLog.Stdout("Session", "DEBUG", false)
+	log := gowsLog.Stdout("Session", cfg.Log.Level, false)
+
+	dialect := cfg.Store.Dialect
+	address := cfg.Store.Address
 	gows, err := BuildSession(ctx, log.Sub(name), dialect, address)
 	if err != nil {
 		return nil, err

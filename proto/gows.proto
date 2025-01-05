@@ -35,6 +35,17 @@ message EventJson {
   string data = 3;
 }
 
+enum LogLevel {
+  TRACE = 0;
+  DEBUG = 1;
+  INFO = 2;
+  WARN = 3;
+  ERROR = 4;
+}
+
+message SessionLogConfig {
+  LogLevel level = 1;
+}
 
 message SessionStoreConfig {
   string dialect = 2;
@@ -43,6 +54,7 @@ message SessionStoreConfig {
 
 message SessionConfig {
   SessionStoreConfig store = 1;
+  SessionLogConfig log = 2;
 }
 
 message StartSessionRequest {
