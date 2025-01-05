@@ -20,6 +20,15 @@ type SessionManager struct {
 	log          waLog.Logger
 }
 
+type StoreConfig struct {
+	Dialect string
+	Address string
+}
+
+type SessionConfig struct {
+	Store StoreConfig
+}
+
 func init() {
 	// Firefox (Ubuntu)
 	store.DeviceProps.PlatformType = proto.DeviceProps_FIREFOX.Enum()
@@ -34,10 +43,11 @@ func NewSessionManager() *SessionManager {
 	}
 }
 
-func (sm *SessionManager) Start(name string, dialect string, address string) (*GoWS, error) {
+func (sm *SessionManager) Start(name string, cfg SessionConfig) (*GoWS, error) {
 	sm.sessionsLock.Lock()
 	defer sm.sessionsLock.Unlock()
-	gows, err := sm.unlockedStart(name, dialect, address)
+	sessionStore := cfg.Store
+	gows, err := sm.unlockedStart(name, sessionStore.Dialect, sessionStore.Address)
 	if err != nil {
 		sm.log.Errorf("Error starting session '%s': %v", name, err)
 		sm.unlockedStop(name)

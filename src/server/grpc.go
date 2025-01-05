@@ -38,11 +38,14 @@ func NewServer() *Server {
 }
 
 func (s *Server) StartSession(ctx context.Context, req *pb.StartSessionRequest) (*pb.Empty, error) {
-	dialect := req.Dialect
-	address := req.Address + "?_foreign_keys=on"
-
+	cfg := gows.SessionConfig{
+		Store: gows.StoreConfig{
+			Dialect: req.Config.Store.Dialect,
+			Address: req.Config.Store.Address + "?_foreign_keys=on",
+		},
+	}
 	session := req.GetId()
-	cli, err := s.Sm.Start(session, dialect, address)
+	cli, err := s.Sm.Start(session, cfg)
 	if err != nil {
 		return nil, err
 	}

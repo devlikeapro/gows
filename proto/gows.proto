@@ -35,10 +35,19 @@ message EventJson {
   string data = 3;
 }
 
-message StartSessionRequest {
-  string id = 1;
+
+message SessionStoreConfig {
   string dialect = 2;
   string address = 3;
+}
+
+message SessionConfig {
+  SessionStoreConfig store = 1;
+}
+
+message StartSessionRequest {
+  string id = 1;
+  SessionConfig config = 2;
 }
 message SessionStateResponse {
   bool found = 1;
