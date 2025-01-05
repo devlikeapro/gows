@@ -16,7 +16,6 @@ import (
 	"reflect"
 	"strings"
 	"sync"
-	"time"
 )
 
 type Server struct {
@@ -131,7 +130,7 @@ func (s *Server) SendMessage(ctx context.Context, req *pb.MessageRequest) (*pb.M
 		return nil, err
 	}
 
-	return &pb.MessageResponse{Id: res.ID, Timestamp: time.Now().Unix()}, nil
+	return &pb.MessageResponse{Id: res.ID, Timestamp: res.Timestamp.Unix()}, nil
 }
 
 func (s *Server) GetProfilePicture(ctx context.Context, req *pb.ProfilePictureRequest) (*pb.ProfilePictureResponse, error) {
