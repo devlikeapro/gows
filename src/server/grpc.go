@@ -9,6 +9,7 @@ import (
 	pb "github.com/devlikeapro/gows/proto"
 	"github.com/golang/protobuf/proto"
 	"github.com/google/uuid"
+	"github.com/h2non/bimg"
 	"go.mau.fi/whatsmeow"
 	"go.mau.fi/whatsmeow/proto/waE2E"
 	"go.mau.fi/whatsmeow/types"
@@ -122,9 +123,39 @@ func (s *Server) SendMessage(ctx context.Context, req *pb.MessageRequest) (*pb.M
 		return nil, err
 	}
 
-	res, err := cli.SendMessage(context.Background(), jid, &waE2E.Message{
-		Conversation: proto.String(req.GetText()),
-	})
+	message := waE2E.Message{}
+	if req.Media == nil {
+		message.Conversation = proto.String(req.Text)
+	} else {
+		mediaType := whatsmeow.MediaImage
+		resp, err := cli.Upload(ctx, req.Media.Content, mediaType)
+		if err != nil {
+			return nil, err
+		}
+		// Generate Thumbnail
+		image := bimg.NewImage(req.Media.Content)
+		options := bimg.Options{
+			Width:  72,
+			Height: 72,
+			Crop:   true,
+		}
+		thumbnail, err := image.Process(options)
+
+		imageMsg := &waE2E.ImageMessage{
+			Caption:       proto.String(req.Text),
+			Mimetype:      proto.String(req.Media.Mimetype),
+			JPEGThumbnail: thumbnail,
+			URL:           &resp.URL,
+			DirectPath:    &resp.DirectPath,
+			MediaKey:      resp.MediaKey,
+			FileEncSHA256: resp.FileEncSHA256,
+			FileSHA256:    resp.FileSHA256,
+			FileLength:    &resp.FileLength,
+		}
+		message.ImageMessage = imageMsg
+
+	}
+	res, err := cli.SendMessage(context.Background(), jid, &message)
 
 	if err != nil {
 		return nil, err

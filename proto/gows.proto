@@ -86,10 +86,24 @@ message Session {
 //
 // Actions
 //
+enum MediaType {
+  IMAGE = 0;
+  AUDIO = 1;
+  VIDEO = 2;
+  DOCUMENT = 3;
+}
+
+message Media {
+  bytes content = 1;
+  MediaType type = 2;
+  string mimetype = 3;
+}
+
 message MessageRequest {
   Session session = 1;
   string jid = 2;
   string text = 3;
+  Media media = 4;
 }
 
 message MessageResponse {
