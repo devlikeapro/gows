@@ -4,20 +4,39 @@ package messages;
 
 option go_package = "/";
 
+//
+// Events
+//
+service EventStream {
+  rpc StreamEvents(Session) returns (stream EventJson);
+}
+
+message EventJson {
+  string session = 2;
+  string event = 1;
+  string data = 3;
+}
+
 service MessageService {
+  //
+  // Session management
+  //
   rpc StartSession(StartSessionRequest) returns (Empty);
   rpc StopSession(Session) returns (Empty);
   rpc GetSessionState(Session) returns (SessionStateResponse);
   rpc RequestCode(PairCodeRequest) returns (PairCodeResponse);
   rpc Logout(Session) returns (Empty);
+  //
+  // Actions
+  //
   rpc SendText (TextMessageRequest) returns (MessageResponse);
   rpc GetProfilePicture (ProfilePictureRequest) returns (ProfilePictureResponse);
 }
 
-service EventStream {
-  rpc StreamEvents(Session) returns (stream EventJson);
-}
 
+//
+// Session management
+//
 message PairCodeRequest {
   Session session = 1;
   string phone = 2;
@@ -28,12 +47,6 @@ message PairCodeResponse {
 }
 
 message Empty {}
-
-message EventJson {
-  string session = 2;
-  string event = 1;
-  string data = 3;
-}
 
 enum LogLevel {
   TRACE = 0;
@@ -70,14 +83,9 @@ message Session {
   string id = 1;
 }
 
-message ProfilePictureRequest {
-  Session session = 1;
-  string jid = 2;
-}
-message ProfilePictureResponse {
-  string url = 2;
-}
-
+//
+// Actions
+//
 message TextMessageRequest {
   Session session = 1;
   string jid = 2;
@@ -88,3 +96,12 @@ message MessageResponse {
   string id = 1;
   int64 timestamp = 2;
 }
+
+message ProfilePictureRequest {
+  Session session = 1;
+  string jid = 2;
+}
+message ProfilePictureResponse {
+  string url = 2;
+}
+
