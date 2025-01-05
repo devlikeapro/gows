@@ -234,28 +234,31 @@ func (s *Server) StreamEvents(req *pb.Session, stream grpc.ServerStreamingServer
 	streamId := uuid.New()
 	listener := s.addListener(name, streamId)
 	defer s.removeListener(name, streamId)
+	for {
+		select {
+		case <-stream.Context().Done():
+			return stream.Context().Err()
+		case event := <-listener:
+			// Remove * at the start if it's *
+			eventType := reflect.TypeOf(event).String()
+			eventType = strings.TrimPrefix(eventType, "*")
 
-	for event := range listener {
-		// Remove * at the start if it's *
-		eventType := reflect.TypeOf(event).String()
-		eventType = strings.TrimPrefix(eventType, "*")
+			jsonData, err := json.Marshal(event)
+			if err != nil {
+				continue
+			}
 
-		jsonData, err := json.Marshal(event)
-		if err != nil {
-			continue
-		}
-
-		data := pb.EventJson{
-			Session: name,
-			Event:   eventType,
-			Data:    string(jsonData),
-		}
-		err = stream.Send(&data)
-		if err != nil {
-			return err
+			data := pb.EventJson{
+				Session: name,
+				Event:   eventType,
+				Data:    string(jsonData),
+			}
+			err = stream.Send(&data)
+			if err != nil {
+				return err
+			}
 		}
 	}
-	return nil
 }
 
 func (s *Server) IssueEvent(session string, event interface{}) {
