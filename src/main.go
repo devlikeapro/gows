@@ -38,6 +38,10 @@ func init() {
 	flag.StringVar(&socket, "socket", "/tmp/gows.sock", "Socket path")
 }
 
+func remove(path string) {
+	_ = os.Remove(path)
+}
+
 func main() {
 	flag.Parse()
 	log := gowsLog.Stdout("Server", "DEBUG", false)
@@ -46,6 +50,7 @@ func main() {
 	// Open unix socket
 	log.Infof("Opening socket %s", socket)
 	listener := listenSocket(log, socket)
+	defer remove(socket)
 
 	// Start the server
 	log.Infof("gRPC server started!")
