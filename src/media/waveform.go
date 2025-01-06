@@ -33,6 +33,25 @@ func extractOpusFromOgg(data []byte) ([]byte, error) {
 	}
 	return opusData, nil
 }
+func readStreamPcm(stream *opus.Stream, buffersize int) ([]int16, error) {
+	var pcm []int16
+	pcmbuf := make([]int16, buffersize)
+	for {
+		n, err := stream.Read(pcmbuf)
+		switch err {
+		case io.EOF:
+			return pcm, nil
+		case nil:
+			break
+		default:
+			return nil, fmt.Errorf("error while decoding opus file: %v", err)
+		}
+		if n == 0 {
+			return nil, fmt.Errorf("nil-error Read() must not return 0")
+		}
+		pcm = append(pcm, pcmbuf[:n]...)
+	}
+}
 
 // Waveform generates a waveform from the audio content
 // 64 number from 0 to 100
@@ -42,22 +61,17 @@ func Waveform(content []byte) ([]byte, error) {
 		channels       = 1     // Mono
 		waveformPoints = 64    // Number of points in the waveform
 	)
-	opusData, err := extractOpusFromOgg(content)
+	r := bytes.NewReader(content)
+	stream, err := opus.NewStream(r)
 	if err != nil {
-		return nil, fmt.Errorf("failed to extract Opus data: %v", err)
+		return nil, fmt.Errorf("failed to create Opus stream: %v", err)
 	}
-	decoder, err := opus.NewDecoder(sampleRate, channels)
+	pcm, err := readStreamPcm(stream, sampleRate*channels)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create Opus decoder: %v", err)
-
-	}
-	// Decode the data
-	pcm := make([]int16, sampleRate*channels) // Buffer for PCM samples
-	n, err := decoder.Decode(opusData, pcm)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decode Opus data: %v", err)
+		return nil, fmt.Errorf("failed to read PCM data: %v", err)
 	}
 
+	n := len(pcm)
 	// Calculate the RMS values for segments of the PCM data
 	segmentSize := n / waveformPoints
 	wf := make([]byte, waveformPoints)

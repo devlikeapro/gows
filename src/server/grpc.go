@@ -159,16 +159,18 @@ func (s *Server) SendMessage(ctx context.Context, req *pb.MessageRequest) (*pb.M
 			}
 		case pb.MediaType_AUDIO:
 			mediaType = whatsmeow.MediaAudio
-			// Upload
-			resp, err := cli.Upload(ctx, req.Media.Content, mediaType)
-			if err != nil {
-				return nil, err
-			}
 			// Attach
 			waveform, err := media.Waveform(req.Media.Content)
 			if err != nil {
 				s.log.Errorf("Failed to generate waveform: %v", err)
 			}
+			// Upload
+			resp, err := cli.Upload(ctx, req.Media.Content, mediaType)
+			if err != nil {
+				return nil, err
+			}
+
+			// Attach
 			message.AudioMessage = &waE2E.AudioMessage{
 				Mimetype:      proto.String(req.Media.Mimetype),
 				URL:           &resp.URL,
