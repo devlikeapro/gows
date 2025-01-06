@@ -141,7 +141,7 @@ func (s *Server) SendMessage(ctx context.Context, req *pb.MessageRequest) (*pb.M
 				return nil, err
 			}
 			// Generate Thumbnail
-			thumbnail, err := media.JPEGThumbnail(req.Media.Content)
+			thumbnail, err := media.ThumbnailForImage(req.Media.Content)
 			if err != nil {
 				s.log.Errorf("Failed to generate thumbnail: %v", err)
 			}
@@ -213,7 +213,7 @@ func (s *Server) SendMessage(ctx context.Context, req *pb.MessageRequest) (*pb.M
 			}
 
 			// Generate Thumbnail if possible
-			thumbnail, err := media.JPEGThumbnail(req.Media.Content)
+			thumbnail, err := media.ThumbnailForImage(req.Media.Content)
 			if err != nil {
 				s.log.Infof("Failed to generate thumbnail: %v", err)
 			}

@@ -4,7 +4,7 @@ import (
 	"github.com/h2non/bimg"
 )
 
-func JPEGThumbnail(image []byte) ([]byte, error) {
+func ThumbnailForImage(image []byte) ([]byte, error) {
 	img := bimg.NewImage(image)
 	options := bimg.Options{
 		Width:  72,
