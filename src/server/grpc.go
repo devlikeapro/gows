@@ -141,7 +141,7 @@ func (s *Server) SendMessage(ctx context.Context, req *pb.MessageRequest) (*pb.M
 				return nil, err
 			}
 			// Generate Thumbnail
-			thumbnail, err := media.ThumbnailForImage(req.Media.Content)
+			thumbnail, err := media.ImageThumbnail(req.Media.Content)
 			if err != nil {
 				s.log.Errorf("Failed to generate thumbnail: %v", err)
 			}
@@ -190,7 +190,15 @@ func (s *Server) SendMessage(ctx context.Context, req *pb.MessageRequest) (*pb.M
 				return nil, err
 			}
 			// Generate Thumbnail
-			var thumbnail []byte
+			thumbnail, err := media.VideoThumbnail(
+				req.Media.Content,
+				"00:00:00",
+				struct{ Width, Height int }{Width: 72, Height: 72},
+			)
+
+			if err != nil {
+				s.log.Infof("Failed to generate video thumbnail: %v", err)
+			}
 
 			message.VideoMessage = &waE2E.VideoMessage{
 				Caption:       proto.String(req.Text),
@@ -213,7 +221,7 @@ func (s *Server) SendMessage(ctx context.Context, req *pb.MessageRequest) (*pb.M
 			}
 
 			// Generate Thumbnail if possible
-			thumbnail, err := media.ThumbnailForImage(req.Media.Content)
+			thumbnail, err := media.ImageThumbnail(req.Media.Content)
 			if err != nil {
 				s.log.Infof("Failed to generate thumbnail: %v", err)
 			}
