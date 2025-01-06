@@ -6,13 +6,15 @@ import (
 	"errors"
 	"fmt"
 	"github.com/devlikeapro/gows/gows"
+	gowsLog "github.com/devlikeapro/gows/log"
+	"github.com/devlikeapro/gows/media"
 	pb "github.com/devlikeapro/gows/proto"
 	"github.com/golang/protobuf/proto"
 	"github.com/google/uuid"
-	"github.com/h2non/bimg"
 	"go.mau.fi/whatsmeow"
 	"go.mau.fi/whatsmeow/proto/waE2E"
 	"go.mau.fi/whatsmeow/types"
+	waLog "go.mau.fi/whatsmeow/util/log"
 	"google.golang.org/grpc"
 	"reflect"
 	"strings"
@@ -22,7 +24,8 @@ import (
 type Server struct {
 	pb.UnimplementedMessageServiceServer
 	pb.UnimplementedEventStreamServer
-	Sm *gows.SessionManager
+	Sm  *gows.SessionManager
+	log waLog.Logger
 
 	// session id -> id -> event channel
 	listeners     map[string]map[uuid.UUID]chan interface{}
@@ -32,6 +35,7 @@ type Server struct {
 func NewServer() *Server {
 	return &Server{
 		Sm:            gows.NewSessionManager(),
+		log:           gowsLog.Stdout("gRPC", "INFO", false),
 		listeners:     map[string]map[uuid.UUID]chan interface{}{},
 		listenersLock: sync.RWMutex{},
 	}
@@ -127,36 +131,108 @@ func (s *Server) SendMessage(ctx context.Context, req *pb.MessageRequest) (*pb.M
 	if req.Media == nil {
 		message.Conversation = proto.String(req.Text)
 	} else {
-		mediaType := whatsmeow.MediaImage
-		resp, err := cli.Upload(ctx, req.Media.Content, mediaType)
-		if err != nil {
-			return nil, err
-		}
-		// Generate Thumbnail
-		image := bimg.NewImage(req.Media.Content)
-		options := bimg.Options{
-			Width:  72,
-			Height: 72,
-			Crop:   true,
-		}
-		thumbnail, err := image.Process(options)
+		var mediaType whatsmeow.MediaType
+		switch req.Media.Type {
+		case pb.MediaType_IMAGE:
+			// Upload
+			mediaType = whatsmeow.MediaImage
+			resp, err := cli.Upload(ctx, req.Media.Content, mediaType)
+			if err != nil {
+				return nil, err
+			}
+			// Generate Thumbnail
+			thumbnail, err := media.JPEGThumbnail(req.Media.Content)
+			if err != nil {
+				s.log.Errorf("Failed to generate thumbnail: %v", err)
+			}
+			// Attach
+			message.ImageMessage = &waE2E.ImageMessage{
+				Caption:       proto.String(req.Text),
+				Mimetype:      proto.String(req.Media.Mimetype),
+				JPEGThumbnail: thumbnail,
+				URL:           &resp.URL,
+				DirectPath:    &resp.DirectPath,
+				MediaKey:      resp.MediaKey,
+				FileEncSHA256: resp.FileEncSHA256,
+				FileSHA256:    resp.FileSHA256,
+				FileLength:    &resp.FileLength,
+			}
+		case pb.MediaType_AUDIO:
+			mediaType = whatsmeow.MediaAudio
+			// Upload
+			resp, err := cli.Upload(ctx, req.Media.Content, mediaType)
+			if err != nil {
+				return nil, err
+			}
+			// Attach
+			waveform, err := media.Waveform(req.Media.Content)
+			if err != nil {
+				s.log.Errorf("Failed to generate waveform: %v", err)
+			}
+			message.AudioMessage = &waE2E.AudioMessage{
+				Mimetype:      proto.String(req.Media.Mimetype),
+				URL:           &resp.URL,
+				DirectPath:    &resp.DirectPath,
+				MediaKey:      resp.MediaKey,
+				FileEncSHA256: resp.FileEncSHA256,
+				FileSHA256:    resp.FileSHA256,
+				FileLength:    &resp.FileLength,
+				Seconds:       nil,
+				Waveform:      waveform,
+			}
+		case pb.MediaType_VIDEO:
+			mediaType = whatsmeow.MediaVideo
+			// Upload
+			resp, err := cli.Upload(ctx, req.Media.Content, mediaType)
+			if err != nil {
+				return nil, err
+			}
+			// Generate Thumbnail
+			var thumbnail []byte
 
-		imageMsg := &waE2E.ImageMessage{
-			Caption:       proto.String(req.Text),
-			Mimetype:      proto.String(req.Media.Mimetype),
-			JPEGThumbnail: thumbnail,
-			URL:           &resp.URL,
-			DirectPath:    &resp.DirectPath,
-			MediaKey:      resp.MediaKey,
-			FileEncSHA256: resp.FileEncSHA256,
-			FileSHA256:    resp.FileSHA256,
-			FileLength:    &resp.FileLength,
+			message.VideoMessage = &waE2E.VideoMessage{
+				Caption:       proto.String(req.Text),
+				Mimetype:      proto.String(req.Media.Mimetype),
+				URL:           &resp.URL,
+				DirectPath:    &resp.DirectPath,
+				MediaKey:      resp.MediaKey,
+				FileEncSHA256: resp.FileEncSHA256,
+				FileSHA256:    resp.FileSHA256,
+				FileLength:    &resp.FileLength,
+				JPEGThumbnail: thumbnail,
+			}
+
+		case pb.MediaType_DOCUMENT:
+			mediaType = whatsmeow.MediaDocument
+			// Upload
+			resp, err := cli.Upload(ctx, req.Media.Content, mediaType)
+			if err != nil {
+				return nil, err
+			}
+
+			// Generate Thumbnail if possible
+			thumbnail, err := media.JPEGThumbnail(req.Media.Content)
+			if err != nil {
+				s.log.Infof("Failed to generate thumbnail: %v", err)
+			}
+
+			// Attach
+			message.DocumentMessage = &waE2E.DocumentMessage{
+				Caption:       proto.String(req.Text),
+				Mimetype:      proto.String(req.Media.Mimetype),
+				URL:           &resp.URL,
+				DirectPath:    &resp.DirectPath,
+				MediaKey:      resp.MediaKey,
+				FileEncSHA256: resp.FileEncSHA256,
+				FileSHA256:    resp.FileSHA256,
+				FileLength:    &resp.FileLength,
+				JPEGThumbnail: thumbnail,
+			}
+
 		}
-		message.ImageMessage = imageMsg
 
 	}
 	res, err := cli.SendMessage(context.Background(), jid, &message)
-
 	if err != nil {
 		return nil, err
 	}
