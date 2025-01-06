@@ -179,7 +179,7 @@ func (s *Server) SendMessage(ctx context.Context, req *pb.MessageRequest) (*pb.M
 				FileEncSHA256: resp.FileEncSHA256,
 				FileSHA256:    resp.FileSHA256,
 				FileLength:    &resp.FileLength,
-				Seconds:       nil,
+				Seconds:       nil, // TODO: Calculate duration
 				Waveform:      waveform,
 			}
 		case pb.MediaType_VIDEO:
