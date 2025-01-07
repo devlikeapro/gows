@@ -3,25 +3,9 @@ package media
 import (
 	"bytes"
 	"fmt"
-	"github.com/h2non/bimg"
-	ffmpeg "github.com/u2takey/ffmpeg-go"
+	"github.com/u2takey/ffmpeg-go"
 	"io"
 )
-
-// ImageThumbnail generates a thumbnail image from an image.
-func ImageThumbnail(image []byte) ([]byte, error) {
-	img := bimg.NewImage(image)
-	options := bimg.Options{
-		Width:  72,
-		Height: 72,
-		Crop:   true,
-	}
-	thumbnail, err := img.Process(options)
-	if err != nil {
-		return nil, err
-	}
-	return thumbnail, nil
-}
 
 // VideoThumbnail generates a thumbnail image from a video at a specific frame.
 func VideoThumbnail(videoData []byte, frameNum int, size struct{ Width int }) ([]byte, error) {
@@ -41,11 +25,10 @@ func VideoThumbnail(videoData []byte, frameNum int, size struct{ Width int }) ([
 	// Run ffmpeg process
 	go func() {
 		defer outputWriter.Close()
-		cmd := ffmpeg.
-			Input("pipe:0").
-			Filter("scale", ffmpeg.Args{fmt.Sprintf("%d:-1", size.Width)}).
-			Filter("select", ffmpeg.Args{fmt.Sprintf("gte(n,%d)", frameNum)}).
-			Output("pipe:", ffmpeg.KwArgs{"vframes": 1, "format": "image2"}).
+		cmd := ffmpeg_go.Input("pipe:0").
+			Filter("scale", ffmpeg_go.Args{fmt.Sprintf("%d:-1", size.Width)}).
+			Filter("select", ffmpeg_go.Args{fmt.Sprintf("gte(n,%d)", frameNum)}).
+			Output("pipe:", ffmpeg_go.KwArgs{"vframes": 1, "format": "image2"}).
 			WithInput(inputReader).
 			WithOutput(outputWriter).
 			OverWriteOutput()

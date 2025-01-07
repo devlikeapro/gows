@@ -70,8 +70,8 @@ func checkWaveformNotEmpty(waveform []byte) error {
 // 64 number from 0 to 100
 func Waveform(content []byte) ([]byte, error) {
 	const (
-		sampleRate     = 48000 // Opus standard
-		channels       = 1     // Mono
+		sampleRate     = 24000 // Opus standard
+		channels       = 2     // Mono
 		waveformPoints = 64    // Number of points in the waveform
 	)
 	r := bytes.NewReader(content)
@@ -103,7 +103,8 @@ func Waveform(content []byte) ([]byte, error) {
 		rms := math.Sqrt(sum / float64(segmentSize))
 
 		// Normalize RMS to range 0-100
-		normalized := byte((rms / math.MaxInt16) * 100)
+		div := rms / float64(math.MaxInt16)
+		normalized := byte((div) * 100)
 		if normalized > 100 {
 			normalized = 100
 		}
