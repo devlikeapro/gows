@@ -31,6 +31,10 @@ service MessageService {
   //
   rpc SendMessage (MessageRequest) returns (MessageResponse);
   rpc GetProfilePicture (ProfilePictureRequest) returns (ProfilePictureResponse);
+  //
+  // Media
+  //
+  rpc DownloadMedia(DownloadMediaRequest) returns (DownloadMediaResponse);
 }
 
 
@@ -117,5 +121,17 @@ message ProfilePictureRequest {
 }
 message ProfilePictureResponse {
   string url = 2;
+}
+
+//
+// Media
+//
+message DownloadMediaRequest {
+  Session session = 1;
+  string message = 2; // JSON string
+}
+
+message DownloadMediaResponse {
+  bytes content = 1;
 }
 
