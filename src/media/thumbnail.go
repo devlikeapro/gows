@@ -6,7 +6,6 @@ import (
 	"github.com/h2non/bimg"
 	ffmpeg "github.com/u2takey/ffmpeg-go"
 	"io"
-	"os"
 )
 
 func ImageThumbnail(image []byte) ([]byte, error) {
@@ -23,7 +22,7 @@ func ImageThumbnail(image []byte) ([]byte, error) {
 	return thumbnail, nil
 }
 
-func VideoThumbnail(videoData []byte, time string, size struct{ Width, Height int }) ([]byte, error) {
+func VideoThumbnail(videoData []byte, frameNum int, size struct{ Width int }) ([]byte, error) {
 	// Create pipes for input and output
 	inputReader, inputWriter := io.Pipe()
 	outputReader, outputWriter := io.Pipe()
@@ -37,25 +36,18 @@ func VideoThumbnail(videoData []byte, time string, size struct{ Width, Height in
 		}
 	}()
 
-	// Construct scale filter
-	scaleFilter := fmt.Sprintf("%d:-1", size.Width)
-	if size.Height != -1 {
-		scaleFilter = fmt.Sprintf("%d:%d", size.Width, size.Height)
-	}
-
 	// Run ffmpeg process
 	go func() {
 		defer outputWriter.Close()
-		err := ffmpeg.Input("pipe:", ffmpeg.KwArgs{"ss": time}).
-			Filter("scale", ffmpeg.Args{scaleFilter}).
-			Output("pipe:1", ffmpeg.KwArgs{
-				"vframes": 1,
-				"f":       "image2",
-			}).
+		cmd := ffmpeg.
+			Input("pipe:0").
+			Filter("scale", ffmpeg.Args{fmt.Sprintf("%d:-1", size.Width)}).
+			Filter("select", ffmpeg.Args{fmt.Sprintf("gte(n,%d)", frameNum)}).
+			Output("pipe:", ffmpeg.KwArgs{"vframes": 1, "format": "image2"}).
 			WithInput(inputReader).
-			WithOutput(outputWriter, os.Stdout).
-			OverWriteOutput().
-			Run()
+			WithOutput(outputWriter).
+			OverWriteOutput()
+		err := cmd.Run()
 		if err != nil {
 			outputWriter.CloseWithError(err)
 		}
@@ -68,5 +60,9 @@ func VideoThumbnail(videoData []byte, time string, size struct{ Width, Height in
 		return nil, err
 	}
 
+	data := buf.Bytes()
+	if len(data) == 0 {
+		return nil, fmt.Errorf("no thumbnail data returned")
+	}
 	return buf.Bytes(), nil
 }

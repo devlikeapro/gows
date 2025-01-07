@@ -192,8 +192,8 @@ func (s *Server) SendMessage(ctx context.Context, req *pb.MessageRequest) (*pb.M
 			// Generate Thumbnail
 			thumbnail, err := media.VideoThumbnail(
 				req.Media.Content,
-				"00:00:00",
-				struct{ Width, Height int }{Width: 72, Height: 72},
+				0,
+				struct{ Width int }{Width: 72},
 			)
 
 			if err != nil {
