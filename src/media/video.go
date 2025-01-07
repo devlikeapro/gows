@@ -8,7 +8,7 @@ import (
 )
 
 // VideoThumbnail generates a thumbnail image from a video at a specific frame.
-func VideoThumbnail(videoData []byte, frameNum int, size struct{ Width int }) ([]byte, error) {
+func VideoThumbnail(content []byte, frameNum int, size struct{ Width int }) ([]byte, error) {
 	// Create pipes for input and output
 	inputReader, inputWriter := io.Pipe()
 	outputReader, outputWriter := io.Pipe()
@@ -16,7 +16,7 @@ func VideoThumbnail(videoData []byte, frameNum int, size struct{ Width int }) ([
 	// Write the input video data to the input pipe
 	go func() {
 		defer inputWriter.Close()
-		_, err := inputWriter.Write(videoData)
+		_, err := inputWriter.Write(content)
 		if err != nil {
 			inputWriter.CloseWithError(err)
 		}
