@@ -132,7 +132,7 @@ enum Presence {
 
 message PresenceRequest {
   Session session = 1;
-  string status = 2;
+  Presence status = 2;
 }
 
 enum ChatPresence {
@@ -143,7 +143,8 @@ enum ChatPresence {
 
 message ChatPresenceRequest {
   Session session = 1;
-  ChatPresence status = 2;
+  string jid = 2;
+  ChatPresence status = 3;
 }
 
 //
