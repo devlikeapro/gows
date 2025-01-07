@@ -1,0 +1,85 @@
+package server
+
+import (
+	"context"
+	"errors"
+	"github.com/devlikeapro/gows/gows"
+	"github.com/devlikeapro/gows/proto"
+	"go.mau.fi/whatsmeow"
+)
+
+func (s *Server) StartSession(ctx context.Context, req *__.StartSessionRequest) (*__.Empty, error) {
+	cfg := gows.SessionConfig{
+		Store: gows.StoreConfig{
+			Dialect: req.Config.Store.Dialect,
+			Address: req.Config.Store.Address + "?_foreign_keys=on",
+		},
+		Log: gows.LogConfig{
+			Level: req.Config.Log.Level.String(),
+		},
+	}
+
+	session := req.GetId()
+	cli, err := s.Sm.Start(session, cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	// Subscribe to events
+	go func() {
+		for evt := range cli.Events {
+			s.IssueEvent(session, evt)
+		}
+	}()
+
+	return &__.Empty{}, nil
+}
+
+func (s *Server) StopSession(ctx context.Context, req *__.Session) (*__.Empty, error) {
+	s.Sm.Stop(req.GetId())
+	return &__.Empty{}, nil
+}
+
+func (s *Server) GetSessionState(ctx context.Context, req *__.Session) (*__.SessionStateResponse, error) {
+	cli, err := s.Sm.Get(req.GetId())
+	if errors.Is(err, gows.ErrSessionNotFound) {
+		return &__.SessionStateResponse{Found: false, Connected: false}, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &__.SessionStateResponse{Found: true, Connected: cli.IsConnected()}, nil
+}
+
+func (s *Server) RequestCode(ctx context.Context, req *__.PairCodeRequest) (*__.PairCodeResponse, error) {
+	cli, err := s.Sm.Get(req.GetSession().GetId())
+	if err != nil {
+		return nil, err
+	}
+	code, err := cli.PairPhone(
+		req.GetPhone(),
+		true,
+		whatsmeow.PairClientChrome,
+		"Chrome (Linux)",
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &__.PairCodeResponse{Code: code}, nil
+}
+
+func (s *Server) Logout(ctx context.Context, req *__.Session) (*__.Empty, error) {
+	cli, err := s.Sm.Get(req.GetId())
+	if err != nil {
+		return nil, err
+	}
+	err = cli.Logout()
+	if err != nil {
+		if errors.Is(err, whatsmeow.ErrNotLoggedIn) {
+			// Ignore not logged in error
+			return &__.Empty{}, nil
+		}
+		return nil, err
+	}
+	return &__.Empty{}, nil
+}
