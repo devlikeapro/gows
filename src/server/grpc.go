@@ -164,6 +164,12 @@ func (s *Server) SendMessage(ctx context.Context, req *pb.MessageRequest) (*pb.M
 			if err != nil {
 				s.log.Errorf("Failed to generate waveform: %v", err)
 			}
+			duration, err := media.Duration(req.Media.Content)
+			if err != nil {
+				s.log.Errorf("Failed to get duration of audio: %v", err)
+			}
+			durationSeconds := uint32(duration)
+
 			// Upload
 			resp, err := cli.Upload(ctx, req.Media.Content, mediaType)
 			if err != nil {
@@ -179,7 +185,7 @@ func (s *Server) SendMessage(ctx context.Context, req *pb.MessageRequest) (*pb.M
 				FileEncSHA256: resp.FileEncSHA256,
 				FileSHA256:    resp.FileSHA256,
 				FileLength:    &resp.FileLength,
-				Seconds:       nil, // TODO: Calculate duration
+				Seconds:       &durationSeconds,
 				Waveform:      waveform,
 			}
 		case pb.MediaType_VIDEO:
