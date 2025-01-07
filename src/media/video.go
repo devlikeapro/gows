@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/u2takey/ffmpeg-go"
 	"io"
+	"os"
 )
 
 // VideoThumbnail generates a thumbnail image from a video at a specific frame.
@@ -31,6 +32,7 @@ func VideoThumbnail(content []byte, frameNum int, size struct{ Width int }) ([]b
 			Output("pipe:", ffmpeg_go.KwArgs{"vframes": 1, "format": "image2"}).
 			WithInput(inputReader).
 			WithOutput(outputWriter).
+			WithErrorOutput(os.Stderr).
 			OverWriteOutput()
 		err := cmd.Run()
 		if err != nil {

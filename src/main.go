@@ -24,7 +24,13 @@ func listenSocket(log waLog.Logger, path string) *net.Listener {
 }
 
 func buildGrpcServer() *grpc.Server {
-	grpcServer := grpc.NewServer()
+	// 128 MB
+	maxMessageSize := 128 * 1024 * 1024
+
+	grpcServer := grpc.NewServer(
+		grpc.MaxRecvMsgSize(maxMessageSize),
+		grpc.MaxSendMsgSize(maxMessageSize),
+	)
 	srv := server.NewServer()
 	// Add an event handler to the client
 	pb.RegisterMessageServiceServer(grpcServer, srv)
