@@ -31,6 +31,8 @@ service MessageService {
   //
   rpc SendMessage (MessageRequest) returns (MessageResponse);
   rpc GetProfilePicture (ProfilePictureRequest) returns (ProfilePictureResponse);
+  rpc SendPresence(PresenceRequest) returns (Empty);
+  rpc SendChatPresence(ChatPresenceRequest) returns (Empty);
   //
   // Media
   //
@@ -121,6 +123,27 @@ message ProfilePictureRequest {
 }
 message ProfilePictureResponse {
   string url = 2;
+}
+
+enum Presence {
+  AVAILABLE = 0;
+  UNAVAILABLE = 1;
+}
+
+message PresenceRequest {
+  Session session = 1;
+  string status = 2;
+}
+
+enum ChatPresence {
+  TYPING = 0;
+  RECORDING = 1;
+  PAUSED = 2;
+}
+
+message ChatPresenceRequest {
+  Session session = 1;
+  ChatPresence status = 2;
 }
 
 //
