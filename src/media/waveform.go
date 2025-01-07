@@ -53,6 +53,19 @@ func readStreamPcm(stream *opus.Stream, buffersize int) ([]int16, error) {
 	}
 }
 
+// checkWaveformNotEmpty checks if the waveform is empty (or all values is 0)
+func checkWaveformNotEmpty(waveform []byte) error {
+	if len(waveform) == 0 {
+		return fmt.Errorf("waveform is empty")
+	}
+	for _, value := range waveform {
+		if value != 0 {
+			return nil
+		}
+	}
+	return fmt.Errorf("waveform is empty")
+}
+
 // Waveform generates a waveform from the audio content
 // 64 number from 0 to 100
 func Waveform(content []byte) ([]byte, error) {
@@ -95,6 +108,10 @@ func Waveform(content []byte) ([]byte, error) {
 			normalized = 100
 		}
 		wf[i] = normalized
+	}
+	err = checkWaveformNotEmpty(wf)
+	if err != nil {
+		return nil, err
 	}
 	return wf, nil
 }

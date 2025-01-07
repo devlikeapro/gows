@@ -8,6 +8,7 @@ import (
 	"io"
 )
 
+// ImageThumbnail generates a thumbnail image from an image.
 func ImageThumbnail(image []byte) ([]byte, error) {
 	img := bimg.NewImage(image)
 	options := bimg.Options{
@@ -22,6 +23,7 @@ func ImageThumbnail(image []byte) ([]byte, error) {
 	return thumbnail, nil
 }
 
+// VideoThumbnail generates a thumbnail image from a video at a specific frame.
 func VideoThumbnail(videoData []byte, frameNum int, size struct{ Width int }) ([]byte, error) {
 	// Create pipes for input and output
 	inputReader, inputWriter := io.Pipe()
