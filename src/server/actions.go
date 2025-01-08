@@ -84,6 +84,7 @@ func (s *Server) SendMessage(ctx context.Context, req *__.MessageRequest) (*__.M
 			}
 
 			// Attach
+			ptt := true
 			message.AudioMessage = &waE2E.AudioMessage{
 				Mimetype:      proto.String(req.Media.Mimetype),
 				URL:           &resp.URL,
@@ -94,6 +95,7 @@ func (s *Server) SendMessage(ctx context.Context, req *__.MessageRequest) (*__.M
 				FileLength:    &resp.FileLength,
 				Seconds:       &durationSeconds,
 				Waveform:      waveform,
+				PTT:           &ptt,
 			}
 		case __.MediaType_VIDEO:
 			mediaType = whatsmeow.MediaVideo
