@@ -17,6 +17,9 @@ func (s *Server) StartSession(ctx context.Context, req *__.StartSessionRequest) 
 		Log: gows.LogConfig{
 			Level: req.Config.Log.Level.String(),
 		},
+		Proxy: gows.ProxyConfig{
+			Url: req.Config.Proxy.Url,
+		},
 	}
 
 	session := req.GetId()

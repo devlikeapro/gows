@@ -29,9 +29,14 @@ type LogConfig struct {
 	Level string
 }
 
+type ProxyConfig struct {
+	Url string
+}
+
 type SessionConfig struct {
 	Store StoreConfig
 	Log   LogConfig
+	Proxy ProxyConfig
 }
 
 func init() {
@@ -76,6 +81,11 @@ func (sm *SessionManager) unlockedStart(name string, cfg SessionConfig) (*GoWS, 
 		return nil, err
 	}
 	sm.sessions[name] = gows
+
+	err = gows.SetProxyAddress(cfg.Proxy.Url)
+	if err != nil {
+		return nil, err
+	}
 	err = gows.Start()
 	if err != nil && !errors.Is(err, whatsmeow.ErrAlreadyConnected) {
 		return nil, err

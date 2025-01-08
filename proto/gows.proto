@@ -73,9 +73,14 @@ message SessionStoreConfig {
   string address = 3;
 }
 
+message SessionProxyConfig {
+  string url = 1;
+}
+
 message SessionConfig {
   SessionStoreConfig store = 1;
   SessionLogConfig log = 2;
+  SessionProxyConfig proxy = 3;
 }
 
 message StartSessionRequest {
