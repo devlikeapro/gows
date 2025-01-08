@@ -4,6 +4,7 @@ import (
 	"context"
 	_ "github.com/mattn/go-sqlite3" // Import the SQLite drive
 	"go.mau.fi/whatsmeow"
+	"go.mau.fi/whatsmeow/proto/waE2E"
 	"go.mau.fi/whatsmeow/store/sqlstore"
 	"go.mau.fi/whatsmeow/types"
 	"go.mau.fi/whatsmeow/types/events"
@@ -126,4 +127,25 @@ func BuildSession(ctx context.Context, log waLog.Logger, dialect string, address
 
 func (gows *GoWS) GetEventChannel() <-chan interface{} {
 	return gows.events
+}
+
+func (gows *GoWS) SendMessage(ctx context.Context, to types.JID, msg *waE2E.Message, extra ...whatsmeow.SendRequestExtra) (resp whatsmeow.SendResponse, err error) {
+	resp, err = gows.Client.SendMessage(ctx, to, msg, extra...)
+	if err != nil {
+		return
+	}
+	info := &types.MessageInfo{
+		MessageSource: types.MessageSource{
+			Chat:     to,
+			Sender:   gows.GetOwnId(),
+			IsFromMe: true,
+			IsGroup:  to.Server == types.GroupServer,
+		},
+		ID:        resp.ID,
+		Timestamp: resp.Timestamp,
+		ServerID:  resp.ServerID,
+	}
+	evt := &events.Message{Info: *info, Message: msg, RawMessage: msg}
+	go gows.handleEvent(evt)
+	return
 }
