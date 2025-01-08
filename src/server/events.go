@@ -10,6 +10,23 @@ import (
 	"strings"
 )
 
+func (s *Server) safeMarshal(v interface{}) (result string) {
+	defer func() {
+		if err := recover(); err != nil {
+			// Print log error and ignore
+			s.log.Errorf("Error when marshaling data: %v", err)
+			result = ""
+		}
+	}()
+	data, err := json.Marshal(v)
+	if err != nil {
+		s.log.Errorf("Error when marshaling data: %v", err)
+		return ""
+	}
+	result = string(data)
+	return result
+}
+
 func (s *Server) StreamEvents(req *__.Session, stream grpc.ServerStreamingServer[__.EventJson]) error {
 	name := req.GetId()
 	streamId := uuid.New()
@@ -24,17 +41,17 @@ func (s *Server) StreamEvents(req *__.Session, stream grpc.ServerStreamingServer
 			eventType := reflect.TypeOf(event).String()
 			eventType = strings.TrimPrefix(eventType, "*")
 
-			jsonData, err := json.Marshal(event)
-			if err != nil {
+			jsonString := s.safeMarshal(event)
+			if jsonString == "" {
 				continue
 			}
 
 			data := __.EventJson{
 				Session: name,
 				Event:   eventType,
-				Data:    string(jsonData),
+				Data:    jsonString,
 			}
-			err = stream.Send(&data)
+			err := stream.Send(&data)
 			if err != nil {
 				return err
 			}
