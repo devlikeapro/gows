@@ -14,7 +14,7 @@ func (s *Server) safeMarshal(v interface{}) (result string) {
 	defer func() {
 		if err := recover(); err != nil {
 			// Print log error and ignore
-			s.log.Errorf("Error when marshaling data: %v", err)
+			s.log.Errorf("Panic happened when marshaling data: %v", err)
 			result = ""
 		}
 	}()
