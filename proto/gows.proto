@@ -30,6 +30,7 @@ service MessageService {
   // Actions
   //
   rpc SendMessage (MessageRequest) returns (MessageResponse);
+  rpc SendReaction (MessageReaction) returns (MessageResponse);
   rpc GetProfilePicture (ProfilePictureRequest) returns (ProfilePictureResponse);
   rpc SendPresence(PresenceRequest) returns (Empty);
   rpc SendChatPresence(ChatPresenceRequest) returns (Empty);
