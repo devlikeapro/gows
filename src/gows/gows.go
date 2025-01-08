@@ -106,6 +106,7 @@ func BuildSession(ctx context.Context, log waLog.Logger, dialect string, address
 	// Configure the client
 	client := whatsmeow.NewClient(deviceStore, log.Sub("Client"))
 	client.AutomaticMessageRerequestFromPhone = true
+	client.EmitAppStateEventsOnFullSync = true
 
 	ctx, cancel := context.WithCancel(ctx)
 	gows := GoWS{
