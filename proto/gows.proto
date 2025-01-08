@@ -118,6 +118,14 @@ message MessageRequest {
   Media media = 4;
 }
 
+message MessageReaction {
+  Session session = 1;
+  string jid = 2;
+  string sender = 3;
+  string messageId = 4;
+  string reaction = 5;
+}
+
 message MessageResponse {
   string id = 1;
   int64 timestamp = 2;

@@ -157,7 +157,7 @@ func (s *Server) SendMessage(ctx context.Context, req *__.MessageRequest) (*__.M
 		}
 
 	}
-	res, err := cli.SendMessage(context.Background(), jid, &message)
+	res, err := cli.SendMessage(ctx, jid, &message)
 	if err != nil {
 		return nil, err
 	}
@@ -242,4 +242,21 @@ func (s *Server) SendChatPresence(ctx context.Context, req *__.ChatPresenceReque
 		return nil, err
 	}
 	return &__.Empty{}, nil
+}
+
+func (s *Server) SendReaction(ctx context.Context, req *__.MessageReaction) (*__.MessageResponse, error) {
+	cli, err := s.Sm.Get(req.GetSession().GetId())
+	if err != nil {
+		return nil, err
+	}
+	jid, err := types.ParseJID(req.Jid)
+	sender, err := types.ParseJID(req.Sender)
+
+	message := cli.BuildReaction(jid, sender, req.MessageId, req.Reaction)
+	res, err := cli.SendMessage(ctx, jid, message)
+	if err != nil {
+		return nil, err
+	}
+
+	return &__.MessageResponse{Id: res.ID, Timestamp: res.Timestamp.Unix()}, nil
 }
