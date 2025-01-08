@@ -11,7 +11,7 @@ func Waveform(content []byte) ([]byte, error) {
 	return nil, fmt.Errorf("not implemented")
 }
 
-func Duration(content []byte) (float64, error) {
+func Duration(content []byte) (float32, error) {
 	// TODO: implement
 	return 0, fmt.Errorf("not implemented")
 }

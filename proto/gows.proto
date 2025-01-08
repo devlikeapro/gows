@@ -99,10 +99,16 @@ enum MediaType {
   DOCUMENT = 3;
 }
 
+message AudioInfo {
+  float duration = 1;
+  bytes waveform = 2;
+}
+
 message Media {
   bytes content = 1;
   MediaType type = 2;
   string mimetype = 3;
+  AudioInfo audio = 4;
 }
 
 message MessageRequest {

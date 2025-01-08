@@ -53,14 +53,27 @@ func (s *Server) SendMessage(ctx context.Context, req *__.MessageRequest) (*__.M
 			}
 		case __.MediaType_AUDIO:
 			mediaType = whatsmeow.MediaAudio
-			// Attach
-			waveform, err := media.Waveform(req.Media.Content)
-			if err != nil {
-				s.log.Errorf("Failed to generate waveform: %v", err)
+			var waveform []byte
+			var duration float32
+			// Get waveform and duration if available
+			if req.Media.Audio != nil {
+				waveform = req.Media.Audio.Waveform
+				duration = req.Media.Audio.Duration
 			}
-			duration, err := media.Duration(req.Media.Content)
-			if err != nil {
-				s.log.Errorf("Failed to get duration of audio: %v", err)
+
+			if waveform == nil || len(waveform) == 0 {
+				// Generate waveform
+				waveform, err = media.Waveform(req.Media.Content)
+				if err != nil {
+					s.log.Errorf("Failed to generate waveform: %v", err)
+				}
+			}
+			if duration == 0 {
+				// Get duration
+				duration, err = media.Duration(req.Media.Content)
+				if err != nil {
+					s.log.Errorf("Failed to get duration of audio: %v", err)
+				}
 			}
 			durationSeconds := uint32(duration)
 
