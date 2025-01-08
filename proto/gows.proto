@@ -34,6 +34,7 @@ service MessageService {
   rpc GetProfilePicture (ProfilePictureRequest) returns (ProfilePictureResponse);
   rpc SendPresence(PresenceRequest) returns (Empty);
   rpc SendChatPresence(ChatPresenceRequest) returns (Empty);
+  rpc SubscribePresence(SubscribePresenceRequest) returns (Empty);
   //
   // Media
   //
@@ -160,6 +161,11 @@ message ChatPresenceRequest {
   Session session = 1;
   string jid = 2;
   ChatPresence status = 3;
+}
+
+message SubscribePresenceRequest {
+  Session session = 1;
+  string jid = 2;
 }
 
 //

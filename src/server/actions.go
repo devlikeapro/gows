@@ -244,6 +244,26 @@ func (s *Server) SendChatPresence(ctx context.Context, req *__.ChatPresenceReque
 	return &__.Empty{}, nil
 }
 
+func (s *Server) SubscribePresence(ctx context.Context, req *__.SubscribePresenceRequest) (*__.Empty, error) {
+	cli, err := s.Sm.Get(req.GetSession().GetId())
+	if err != nil {
+		return nil, err
+	}
+	jid, err := types.ParseJID(req.GetJid())
+	if err != nil {
+		return nil, err
+	}
+	err = cli.SendPresence(types.PresenceAvailable)
+	if err != nil {
+		return nil, err
+	}
+	err = cli.SubscribePresence(jid)
+	if err != nil {
+		return nil, err
+	}
+	return &__.Empty{}, nil
+}
+
 func (s *Server) SendReaction(ctx context.Context, req *__.MessageReaction) (*__.MessageResponse, error) {
 	cli, err := s.Sm.Get(req.GetSession().GetId())
 	if err != nil {
