@@ -14,7 +14,7 @@ import (
 type GoWS struct {
 	*whatsmeow.Client
 	Context context.Context
-	Events  chan interface{}
+	events  chan interface{}
 
 	cancelContext context.CancelFunc
 	container     *sqlstore.Container
@@ -34,8 +34,12 @@ func (gows *GoWS) handleEvent(event interface{}) {
 		data = event
 	}
 
-	// reissue from Events to client
-	gows.Events <- data
+	// reissue from events to client
+	select {
+	case <-gows.Context.Done():
+		return
+	case gows.events <- data:
+	}
 }
 
 func (gows *GoWS) Start() error {
@@ -49,7 +53,7 @@ func (gows *GoWS) Start() error {
 	// No ID stored, new login
 	qrChan, _ := gows.GetQRChannel(gows.Context)
 
-	// reissue from QrChan to Events
+	// reissue from QrChan to events
 	go func() {
 		for {
 			select {
@@ -60,7 +64,7 @@ func (gows *GoWS) Start() error {
 				if qr.Event == "" {
 					return
 				}
-				gows.Events <- qr
+				gows.events <- qr
 			}
 		}
 	}()
@@ -74,6 +78,7 @@ func (gows *GoWS) Stop() {
 	if err != nil {
 		gows.Log.Errorf("Error closing container: %v", err)
 	}
+	close(gows.events)
 }
 
 func (gows *GoWS) GetOwnId() types.JID {
@@ -117,4 +122,8 @@ func BuildSession(ctx context.Context, log waLog.Logger, dialect string, address
 		container,
 	}
 	return &gows, nil
+}
+
+func (gows *GoWS) GetEventChannel() <-chan interface{} {
+	return gows.events
 }

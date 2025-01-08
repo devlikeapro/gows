@@ -27,7 +27,7 @@ func (s *Server) StartSession(ctx context.Context, req *__.StartSessionRequest) 
 
 	// Subscribe to events
 	go func() {
-		for evt := range cli.Events {
+		for evt := range cli.GetEventChannel() {
 			s.IssueEvent(session, evt)
 		}
 	}()
