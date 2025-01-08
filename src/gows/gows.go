@@ -46,11 +46,15 @@ func (gows *GoWS) handleEvent(event interface{}) {
 func (gows *GoWS) Start() error {
 	gows.AddEventHandler(gows.handleEvent)
 
-	// Already logged in, just connect
-	if gows.Store.ID != nil {
-		return gows.Connect()
+	// Not connected, listen for QR code events
+	if gows.Store.ID == nil {
+		gows.listenQRCodeEvents()
 	}
 
+	return gows.Connect()
+}
+
+func (gows *GoWS) listenQRCodeEvents() {
 	// No ID stored, new login
 	qrChan, _ := gows.GetQRChannel(gows.Context)
 
@@ -69,7 +73,6 @@ func (gows *GoWS) Start() error {
 			}
 		}
 	}()
-	return gows.Connect()
 }
 
 func (gows *GoWS) Stop() {
