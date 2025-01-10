@@ -9,6 +9,7 @@ import (
 	"go.mau.fi/whatsmeow"
 	"go.mau.fi/whatsmeow/proto/waE2E"
 	"go.mau.fi/whatsmeow/types"
+	"time"
 )
 
 func (s *Server) SendMessage(ctx context.Context, req *__.MessageRequest) (*__.MessageResponse, error) {
@@ -279,4 +280,39 @@ func (s *Server) SendReaction(ctx context.Context, req *__.MessageReaction) (*__
 	}
 
 	return &__.MessageResponse{Id: res.ID, Timestamp: res.Timestamp.Unix()}, nil
+}
+
+func (s *Server) MarkRead(ctx context.Context, req *__.MarkReadRequest) (*__.Empty, error) {
+	cli, err := s.Sm.Get(req.GetSession().GetId())
+	if err != nil {
+		return nil, err
+	}
+	jid, err := types.ParseJID(req.Jid)
+	if err != nil {
+		return nil, err
+	}
+
+	sender, err := types.ParseJID(req.Sender)
+	if err != nil {
+		return nil, err
+	}
+
+	var receiptType types.ReceiptType
+	switch req.Type {
+	case __.ReceiptType_READ:
+		receiptType = types.ReceiptTypeRead
+	case __.ReceiptType_PLAYED:
+		receiptType = types.ReceiptTypePlayed
+	default:
+		return nil, errors.New("invalid receipt type: " + req.Type.String())
+	}
+
+	// id to ids array
+	ids := []types.MessageID{req.MessageId}
+	now := time.Now()
+	err = cli.MarkRead(ids, now, jid, sender, receiptType)
+	if err != nil {
+		return nil, err
+	}
+	return &__.Empty{}, nil
 }

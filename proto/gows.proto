@@ -35,6 +35,7 @@ service MessageService {
   rpc SendPresence(PresenceRequest) returns (Empty);
   rpc SendChatPresence(ChatPresenceRequest) returns (Empty);
   rpc SubscribePresence(SubscribePresenceRequest) returns (Empty);
+  rpc MarkRead(MarkReadRequest) returns (Empty);
   //
   // Media
   //
@@ -171,6 +172,19 @@ message ChatPresenceRequest {
 message SubscribePresenceRequest {
   Session session = 1;
   string jid = 2;
+}
+
+enum ReceiptType {
+  READ = 0;
+  PLAYED = 1;
+}
+
+message MarkReadRequest {
+  Session session = 1;
+  string jid = 2;
+  string sender = 3;
+  string messageId = 4;
+  ReceiptType type = 5;
 }
 
 //
