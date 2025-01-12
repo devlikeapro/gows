@@ -2,6 +2,7 @@ package gows
 
 import (
 	"context"
+	_ "github.com/lib/pq"           // Import the Postgres drive
 	_ "github.com/mattn/go-sqlite3" // Import the SQLite drive
 	"go.mau.fi/whatsmeow"
 	"go.mau.fi/whatsmeow/proto/waE2E"
