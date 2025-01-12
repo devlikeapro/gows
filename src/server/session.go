@@ -9,10 +9,19 @@ import (
 )
 
 func (s *Server) StartSession(ctx context.Context, req *__.StartSessionRequest) (*__.Empty, error) {
+	dialect := req.Config.Store.Dialect
+	var address string
+	switch {
+	case dialect == "sqlite":
+		address = req.Config.Store.Address + "?_foreign_keys=on"
+	case dialect == "postgres":
+		address = req.Config.Store.Address
+	}
+
 	cfg := gows.SessionConfig{
 		Store: gows.StoreConfig{
-			Dialect: req.Config.Store.Dialect,
-			Address: req.Config.Store.Address + "?_foreign_keys=on",
+			Dialect: dialect,
+			Address: address,
 		},
 		Log: gows.LogConfig{
 			Level: req.Config.Log.Level.String(),
