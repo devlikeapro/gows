@@ -110,6 +110,7 @@ func BuildSession(ctx context.Context, log waLog.Logger, dialect string, address
 	}
 	deviceStore, err := container.GetFirstDevice()
 	if err != nil {
+		_ = container.Close()
 		return nil, err
 	}
 
