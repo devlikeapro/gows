@@ -12,6 +12,8 @@ func (s *Server) StartSession(ctx context.Context, req *__.StartSessionRequest) 
 	dialect := req.Config.Store.Dialect
 	var address string
 	switch {
+	case dialect == "sqlite3":
+		address = req.Config.Store.Address + "?_foreign_keys=on"
 	case dialect == "sqlite":
 		address = req.Config.Store.Address + "?_foreign_keys=on"
 	case dialect == "postgres":
