@@ -16,6 +16,8 @@ func (s *Server) StartSession(ctx context.Context, req *__.StartSessionRequest) 
 		address = req.Config.Store.Address + "?_foreign_keys=on"
 	case dialect == "postgres":
 		address = req.Config.Store.Address
+	default:
+		return nil, errors.New("unsupported sql dialect: " + dialect)
 	}
 
 	cfg := gows.SessionConfig{
