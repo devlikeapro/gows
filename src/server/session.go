@@ -6,7 +6,19 @@ import (
 	"github.com/devlikeapro/gows/gows"
 	"github.com/devlikeapro/gows/proto"
 	"go.mau.fi/whatsmeow"
+	"net/url"
 )
+
+func addApplicationName(address string, name string) string {
+	parsedURL, err := url.Parse(address)
+	if err != nil {
+		return address
+	}
+	queryParams := parsedURL.Query()
+	queryParams.Set("application_name", name)
+	parsedURL.RawQuery = queryParams.Encode()
+	return parsedURL.String()
+}
 
 func (s *Server) StartSession(ctx context.Context, req *__.StartSessionRequest) (*__.Empty, error) {
 	dialect := req.Config.Store.Dialect
@@ -17,7 +29,7 @@ func (s *Server) StartSession(ctx context.Context, req *__.StartSessionRequest) 
 	case dialect == "sqlite":
 		address = req.Config.Store.Address + "?_foreign_keys=on"
 	case dialect == "postgres":
-		address = req.Config.Store.Address
+		address = addApplicationName(req.Config.Store.Address, "GOWS")
 	default:
 		return nil, errors.New("unsupported sql dialect: " + dialect)
 	}
