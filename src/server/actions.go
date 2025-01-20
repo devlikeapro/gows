@@ -23,8 +23,26 @@ func (s *Server) SendMessage(ctx context.Context, req *__.MessageRequest) (*__.M
 	}
 
 	message := waE2E.Message{}
+
 	if req.Media == nil {
-		message.Conversation = proto.String(req.Text)
+		var backgroundArgb *uint32
+		if req.BackgroundColor != nil {
+			backgroundArgb, err = media.ParseColor(req.BackgroundColor.Value)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		var font *waE2E.ExtendedTextMessage_FontType
+		if req.Font != nil {
+			font = media.ParseFont(req.Font.Value)
+		}
+
+		message.ExtendedTextMessage = &waE2E.ExtendedTextMessage{
+			Text:           proto.String(req.Text),
+			BackgroundArgb: backgroundArgb,
+			Font:           font,
+		}
 	} else {
 		var mediaType whatsmeow.MediaType
 		switch req.Media.Type {

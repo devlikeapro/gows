@@ -3,6 +3,13 @@ syntax = "proto3";
 package messages;
 
 option go_package = "/";
+// Common types
+message OptionalString {
+  string value = 1;
+}
+message OptionalUInt32 {
+  uint32 value = 1;
+}
 
 //
 // Events
@@ -119,11 +126,15 @@ message Media {
   AudioInfo audio = 4;
 }
 
+
 message MessageRequest {
   Session session = 1;
   string jid = 2;
   string text = 3;
   Media media = 4;
+
+  OptionalString backgroundColor = 5;
+  OptionalUInt32 font = 6;
 }
 
 message MessageReaction {
