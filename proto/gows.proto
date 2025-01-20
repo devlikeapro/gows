@@ -45,6 +45,11 @@ service MessageService {
   rpc MarkRead(MarkReadRequest) returns (Empty);
   rpc CheckPhones(CheckPhonesRequest) returns (CheckPhonesResponse);
   //
+  // Newsletters
+  //
+  rpc GetSubscribedNewsletters(NewsletterListRequest) returns (NewsletterList);
+  rpc GetNewsletterInfo(NewsletterInfoRequest) returns (Newsletter);
+  //
   // Media
   //
   rpc DownloadMedia(DownloadMediaRequest) returns (DownloadMediaResponse);
@@ -212,6 +217,32 @@ message PhoneInfo {
 
 message CheckPhonesResponse {
   repeated PhoneInfo infos = 1;
+}
+//
+// Newsletters
+//
+message NewsletterListRequest {
+  Session session = 1;
+}
+
+message Newsletter {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  string invite = 4;
+  string preview = 6;
+  string picture = 5;
+  bool verified = 7;
+  string role = 8;
+}
+
+message NewsletterList {
+  repeated Newsletter newsletters = 1;
+}
+
+message NewsletterInfoRequest {
+  Session session = 1;
+  string id = 2;
 }
 
 //
