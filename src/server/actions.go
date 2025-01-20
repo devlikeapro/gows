@@ -334,3 +334,34 @@ func (s *Server) MarkRead(ctx context.Context, req *__.MarkReadRequest) (*__.Emp
 	}
 	return &__.Empty{}, nil
 }
+
+func (s *Server) CheckPhones(ctx context.Context, req *__.CheckPhonesRequest) (*__.CheckPhonesResponse, error) {
+	cli, err := s.Sm.Get(req.GetSession().GetId())
+	if err != nil {
+		return nil, err
+	}
+
+	phones := make([]string, len(req.Phones))
+	for i, p := range req.Phones {
+		// start with +
+		if p[0] != '+' {
+			p = "+" + p
+		}
+		phones[i] = p
+	}
+
+	res, err := cli.IsOnWhatsApp(phones)
+	if err != nil {
+		return nil, err
+	}
+
+	infos := make([]*__.PhoneInfo, len(res))
+	for i, r := range res {
+		infos[i] = &__.PhoneInfo{
+			Phone:      r.Query,
+			Jid:        r.JID.String(),
+			Registered: r.IsIn,
+		}
+	}
+	return &__.CheckPhonesResponse{Infos: infos}, nil
+}
