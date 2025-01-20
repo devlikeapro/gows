@@ -2,9 +2,11 @@ package server
 
 import (
 	"context"
+	"errors"
+	"github.com/devlikeapro/gows/gows"
 	__ "github.com/devlikeapro/gows/proto"
+	"go.mau.fi/whatsmeow"
 	"go.mau.fi/whatsmeow/types"
-	"strings"
 )
 
 func toNewsletter(n *types.NewsletterMetadata) *__.Newsletter {
@@ -61,15 +63,13 @@ func (s *Server) GetSubscribedNewsletters(ctx context.Context, req *__.Newslette
 	return &__.NewsletterList{Newsletters: list}, nil
 }
 
-const newsletterJIDSuffix = "@newsletter"
-
 func (s *Server) GetNewsletterInfo(ctx context.Context, req *__.NewsletterInfoRequest) (*__.Newsletter, error) {
 	cli, err := s.Sm.Get(req.GetSession().GetId())
 	if err != nil {
 		return nil, err
 	}
 	id := req.GetId()
-	if strings.HasSuffix(id, newsletterJIDSuffix) {
+	if gows.HasNewsletterSuffix(id) {
 		jid, err := types.ParseJID(id)
 		if err != nil {
 			return nil, err
@@ -85,4 +85,65 @@ func (s *Server) GetNewsletterInfo(ctx context.Context, req *__.NewsletterInfoRe
 		return nil, err
 	}
 	return toNewsletter(resp), nil
+}
+
+func (s *Server) CreateNewsletter(ctx context.Context, req *__.CreateNewsletterRequest) (*__.Newsletter, error) {
+	cli, err := s.Sm.Get(req.GetSession().GetId())
+	if err != nil {
+		return nil, err
+	}
+	params := whatsmeow.CreateNewsletterParams{
+		Name:        req.GetName(),
+		Description: req.GetDescription(),
+		Picture:     req.GetPicture(),
+	}
+	resp, err := cli.CreateNewsletter(params)
+	if err != nil {
+		return nil, err
+	}
+	return toNewsletter(resp), nil
+
+}
+
+func (s *Server) NewsletterToggleMute(ctx context.Context, req *__.NewsletterToggleMuteRequest) (*__.Empty, error) {
+	cli, err := s.Sm.Get(req.GetSession().GetId())
+	if err != nil {
+		return nil, err
+	}
+	jid, err := types.ParseJID(req.GetJid())
+	if err != nil {
+		return nil, err
+	}
+	if !gows.IsNewsletter(jid) {
+		return nil, errors.New("invalid jid, not a newsletter")
+	}
+	err = cli.NewsletterToggleMute(jid, req.GetMute())
+	if err != nil {
+		return nil, err
+	}
+	return &__.Empty{}, nil
+}
+
+// NewsletterToggleFollow
+func (s *Server) NewsletterToggleFollow(ctx context.Context, req *__.NewsletterToggleFollowRequest) (*__.Empty, error) {
+	cli, err := s.Sm.Get(req.GetSession().GetId())
+	if err != nil {
+		return nil, err
+	}
+	jid, err := types.ParseJID(req.GetJid())
+	if err != nil {
+		return nil, err
+	}
+	if !gows.IsNewsletter(jid) {
+		return nil, errors.New("invalid jid, not a newsletter")
+	}
+	if req.Follow {
+		err = cli.FollowNewsletter(jid)
+	} else {
+		err = cli.UnfollowNewsletter(jid)
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &__.Empty{}, nil
 }

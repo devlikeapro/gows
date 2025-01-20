@@ -3,10 +3,13 @@ syntax = "proto3";
 package messages;
 
 option go_package = "/";
+//
 // Common types
+//
 message OptionalString {
   string value = 1;
 }
+
 message OptionalUInt32 {
   uint32 value = 1;
 }
@@ -49,6 +52,9 @@ service MessageService {
   //
   rpc GetSubscribedNewsletters(NewsletterListRequest) returns (NewsletterList);
   rpc GetNewsletterInfo(NewsletterInfoRequest) returns (Newsletter);
+  rpc CreateNewsletter(CreateNewsletterRequest) returns (Newsletter);
+  rpc NewsletterToggleMute(NewsletterToggleMuteRequest) returns (Empty);
+  rpc NewsletterToggleFollow(NewsletterToggleFollowRequest) returns (Empty);
   //
   // Media
   //
@@ -244,6 +250,26 @@ message NewsletterInfoRequest {
   Session session = 1;
   string id = 2;
 }
+
+message CreateNewsletterRequest {
+  Session session = 1;
+  string name = 2;
+  string description = 3;
+  bytes picture = 4;
+}
+
+message NewsletterToggleMuteRequest {
+  Session session = 1;
+  string jid = 2;
+  bool mute = 3;
+}
+
+message NewsletterToggleFollowRequest {
+  Session session = 1;
+  string jid = 2;
+  bool follow = 3;
+}
+
 
 //
 // Media
