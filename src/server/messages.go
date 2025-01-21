@@ -13,16 +13,17 @@ import (
 )
 
 func (s *Server) SendMessage(ctx context.Context, req *__.MessageRequest) (*__.MessageResponse, error) {
-	jid, err := types.ParseJID(req.GetJid())
+	cli, err := s.Sm.Get(req.GetSession().GetId())
 	if err != nil {
 		return nil, err
 	}
-	cli, err := s.Sm.Get(req.GetSession().GetId())
+	jid, err := types.ParseJID(req.GetJid())
 	if err != nil {
 		return nil, err
 	}
 
 	message := waE2E.Message{}
+	mediaResponse := whatsmeow.UploadResponse{}
 
 	if req.Media == nil {
 		var backgroundArgb *uint32
@@ -49,10 +50,11 @@ func (s *Server) SendMessage(ctx context.Context, req *__.MessageRequest) (*__.M
 		case __.MediaType_IMAGE:
 			// Upload
 			mediaType = whatsmeow.MediaImage
-			resp, err := cli.Upload(ctx, req.Media.Content, mediaType)
+			mediaResponse, err = cli.UploadMedia(ctx, jid, req.Media.Content, mediaType)
 			if err != nil {
 				return nil, err
 			}
+
 			// Generate Thumbnail
 			thumbnail, err := media.ImageThumbnail(req.Media.Content)
 			if err != nil {
@@ -63,12 +65,12 @@ func (s *Server) SendMessage(ctx context.Context, req *__.MessageRequest) (*__.M
 				Caption:       proto.String(req.Text),
 				Mimetype:      proto.String(req.Media.Mimetype),
 				JPEGThumbnail: thumbnail,
-				URL:           &resp.URL,
-				DirectPath:    &resp.DirectPath,
-				MediaKey:      resp.MediaKey,
-				FileEncSHA256: resp.FileEncSHA256,
-				FileSHA256:    resp.FileSHA256,
-				FileLength:    &resp.FileLength,
+				URL:           &mediaResponse.URL,
+				DirectPath:    &mediaResponse.DirectPath,
+				FileSHA256:    mediaResponse.FileSHA256,
+				FileLength:    &mediaResponse.FileLength,
+				MediaKey:      mediaResponse.MediaKey,
+				FileEncSHA256: mediaResponse.FileEncSHA256,
 			}
 		case __.MediaType_AUDIO:
 			mediaType = whatsmeow.MediaAudio
@@ -97,7 +99,7 @@ func (s *Server) SendMessage(ctx context.Context, req *__.MessageRequest) (*__.M
 			durationSeconds := uint32(duration)
 
 			// Upload
-			resp, err := cli.Upload(ctx, req.Media.Content, mediaType)
+			mediaResponse, err = cli.UploadMedia(ctx, jid, req.Media.Content, mediaType)
 			if err != nil {
 				return nil, err
 			}
@@ -106,12 +108,12 @@ func (s *Server) SendMessage(ctx context.Context, req *__.MessageRequest) (*__.M
 			ptt := true
 			message.AudioMessage = &waE2E.AudioMessage{
 				Mimetype:      proto.String(req.Media.Mimetype),
-				URL:           &resp.URL,
-				DirectPath:    &resp.DirectPath,
-				MediaKey:      resp.MediaKey,
-				FileEncSHA256: resp.FileEncSHA256,
-				FileSHA256:    resp.FileSHA256,
-				FileLength:    &resp.FileLength,
+				URL:           &mediaResponse.URL,
+				DirectPath:    &mediaResponse.DirectPath,
+				MediaKey:      mediaResponse.MediaKey,
+				FileEncSHA256: mediaResponse.FileEncSHA256,
+				FileSHA256:    mediaResponse.FileSHA256,
+				FileLength:    &mediaResponse.FileLength,
 				Seconds:       &durationSeconds,
 				Waveform:      waveform,
 				PTT:           &ptt,
@@ -119,10 +121,11 @@ func (s *Server) SendMessage(ctx context.Context, req *__.MessageRequest) (*__.M
 		case __.MediaType_VIDEO:
 			mediaType = whatsmeow.MediaVideo
 			// Upload
-			resp, err := cli.Upload(ctx, req.Media.Content, mediaType)
+			mediaResponse, err = cli.UploadMedia(ctx, jid, req.Media.Content, mediaType)
 			if err != nil {
 				return nil, err
 			}
+
 			// Generate Thumbnail
 			thumbnail, err := media.VideoThumbnail(
 				req.Media.Content,
@@ -137,19 +140,19 @@ func (s *Server) SendMessage(ctx context.Context, req *__.MessageRequest) (*__.M
 			message.VideoMessage = &waE2E.VideoMessage{
 				Caption:       proto.String(req.Text),
 				Mimetype:      proto.String(req.Media.Mimetype),
-				URL:           &resp.URL,
-				DirectPath:    &resp.DirectPath,
-				MediaKey:      resp.MediaKey,
-				FileEncSHA256: resp.FileEncSHA256,
-				FileSHA256:    resp.FileSHA256,
-				FileLength:    &resp.FileLength,
+				URL:           &mediaResponse.URL,
+				DirectPath:    &mediaResponse.DirectPath,
+				MediaKey:      mediaResponse.MediaKey,
+				FileEncSHA256: mediaResponse.FileEncSHA256,
+				FileSHA256:    mediaResponse.FileSHA256,
+				FileLength:    &mediaResponse.FileLength,
 				JPEGThumbnail: thumbnail,
 			}
 
 		case __.MediaType_DOCUMENT:
 			mediaType = whatsmeow.MediaDocument
 			// Upload
-			resp, err := cli.Upload(ctx, req.Media.Content, mediaType)
+			mediaResponse, err = cli.UploadMedia(ctx, jid, req.Media.Content, mediaType)
 			if err != nil {
 				return nil, err
 			}
@@ -164,19 +167,24 @@ func (s *Server) SendMessage(ctx context.Context, req *__.MessageRequest) (*__.M
 			message.DocumentMessage = &waE2E.DocumentMessage{
 				Caption:       proto.String(req.Text),
 				Mimetype:      proto.String(req.Media.Mimetype),
-				URL:           &resp.URL,
-				DirectPath:    &resp.DirectPath,
-				MediaKey:      resp.MediaKey,
-				FileEncSHA256: resp.FileEncSHA256,
-				FileSHA256:    resp.FileSHA256,
-				FileLength:    &resp.FileLength,
+				URL:           &mediaResponse.URL,
+				DirectPath:    &mediaResponse.DirectPath,
+				MediaKey:      mediaResponse.MediaKey,
+				FileEncSHA256: mediaResponse.FileEncSHA256,
+				FileSHA256:    mediaResponse.FileSHA256,
+				FileLength:    &mediaResponse.FileLength,
 				JPEGThumbnail: thumbnail,
 			}
-
 		}
-
 	}
-	res, err := cli.SendMessage(ctx, jid, &message)
+
+	extra := whatsmeow.SendRequestExtra{}
+	if mediaResponse.Handle != "" {
+		// Newsletters
+		extra.MediaHandle = mediaResponse.Handle
+	}
+
+	res, err := cli.SendMessage(ctx, jid, &message, extra)
 	if err != nil {
 		return nil, err
 	}
